@@ -9,12 +9,16 @@ class StudentHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // List of test names
-    List<String> testNames = [
+    List<String> upcommingTest = [
       'HTML 10-9 10:30',
       'C# 23-1 8:23',
       'Flutter 12-4 18:00',
       'PC parts 29-8 13:00',
       'Test 5',
+    ];
+      List<String> availableTest = [
+      'rust 10-9 10:30',
+      'loops 23-1 8:23',
     ];
 
     return MaterialApp(
@@ -32,7 +36,23 @@ class StudentHome extends StatelessWidget {
                 'Available Tests',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
               ),
-              const SizedBox(height: 20),
+               Expanded(
+                child: ListView.builder(
+                  itemCount: availableTest.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return Card(  // Use Card for better visual separation
+                      margin: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: ListTile(
+                        title: Text(availableTest[index]),
+                        onTap: () {
+                          // Handle tap on the test name if needed
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
               const Text(
                 'Upcoming Tests',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
@@ -40,12 +60,12 @@ class StudentHome extends StatelessWidget {
               const SizedBox(height: 20), // Space between the header and the list
               Expanded(
                 child: ListView.builder(
-                  itemCount: testNames.length,
+                  itemCount: upcommingTest.length,
                   itemBuilder: (BuildContext context, int index) {
                     return Card(  // Use Card for better visual separation
                       margin: const EdgeInsets.symmetric(vertical: 8.0),
                       child: ListTile(
-                        title: Text(testNames[index]),
+                        title: Text(upcommingTest[index]),
                         onTap: () {
                           // Handle tap on the test name if needed
                         },

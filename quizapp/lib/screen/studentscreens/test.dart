@@ -8,13 +8,9 @@ class Test extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    routes:
-    {
-      //'/test': (context) => StudentLogin(), // Define the route for student login
-    }
-    ;
-    return Padding(
-      padding: const EdgeInsets.all(10),
+
+    return const Padding(
+      padding: EdgeInsets.all(10),
     );
   }
 }

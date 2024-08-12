@@ -3,44 +3,39 @@ import 'package:quizapp/screen/studentscreens/test.dart';
 
 void main() => runApp(const StudentHome());
 
-// Use proper class naming conventions (PascalCase)
 class StudentHome extends StatelessWidget {
-  const StudentHome({super.key});
+  const StudentHome({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    routes:
-    {
-      '/test';
-      (context) => Test(); // Define the route for student login
-    }
-    ;
+    const String _title = 'Mercantec Quiz';
+
     // List of test names
-    List<String> upcommingTest = [
+    List<String> upcomingTest = [
       'HTML 10-9 10:30',
       'C# 23-1 8:23',
       'Flutter 12-4 18:00',
       'PC parts 29-8 13:00',
       'Test 5',
     ];
+
     List<String> availableTest = [
-      'rust 10-9 10:30',
-      'loops 23-1 8:23',
-      'array 23-1 11:30',
-      'loops 23-1 8:23',
+      'Rust 10-9 10:30',
+      'Loops 23-1 8:23',
+      'Array 23-1 11:30',
+      'Loops 23-1 8:23',
     ];
 
     return MaterialApp(
+      title: _title,
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Mercantec Quiz'),
+          title: const Text(_title),
         ),
         body: Padding(
-          // Add padding for better layout
           padding: const EdgeInsets.all(16.0),
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start, // Align items to the start (left)
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               const SizedBox(height: 20),
               const Text(
@@ -52,13 +47,11 @@ class StudentHome extends StatelessWidget {
                   itemCount: availableTest.length,
                   itemBuilder: (BuildContext context, int index) {
                     return Card(
-                      // Use Card for better visual separation
                       margin: const EdgeInsets.symmetric(vertical: 8.0),
                       child: ListTile(
                         title: Text(availableTest[index]),
                         onTap: () {
-                          Navigator.of(context)
-                              .pushNamed('/test'); // Navigate to student login
+                          Navigator.of(context).pushNamed('/test');
                         },
                       ),
                     );
@@ -70,17 +63,15 @@ class StudentHome extends StatelessWidget {
                 'Upcoming Tests',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
               ),
-              const SizedBox(
-                  height: 20), // Space between the header and the list
+              const SizedBox(height: 20),
               Expanded(
                 child: ListView.builder(
-                  itemCount: upcommingTest.length,
+                  itemCount: upcomingTest.length,
                   itemBuilder: (BuildContext context, int index) {
                     return Card(
-                      // Use Card for better visual separation
                       margin: const EdgeInsets.symmetric(vertical: 8.0),
                       child: ListTile(
-                        title: Text(upcommingTest[index]),
+                        title: Text(upcomingTest[index]),
                         onTap: () {
                           // Handle tap on the test name if needed
                         },
@@ -93,6 +84,9 @@ class StudentHome extends StatelessWidget {
           ),
         ),
       ),
+      routes: {
+        '/test': (context) => const Test(),
+      },
     );
   }
 }

@@ -118,7 +118,7 @@ class _TestState extends State<Test> {
               ),
               child: Image.asset(
                 currentImage,
-                fit: BoxFit.cover, // Ensures the image covers the box without distortion
+                fit: BoxFit.contain, // Ensures the image covers the box without distortion
               ),
             ),
             const SizedBox(height: 20),

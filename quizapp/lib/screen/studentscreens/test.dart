@@ -10,7 +10,7 @@ class TestApp extends StatelessWidget {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('the name og the quiz'),
+          title: const Text('test name'),
         ),
         body: const Test(),
       ),
@@ -46,23 +46,22 @@ class _TestState extends State<Test> {
     },
     {
       'question': 'What is the difference between hot reload and hot restart?',
-      'answers': [
-        'Hot reload updates UI instantly',
-        'Hot restart restarts the app',
-        'Both restart the app',
-        'Both refresh the UI'
-      ]
+      'answers': ['Hot reload updates UI instantly', 'Hot restart restarts the app', 'Both restart the app', 'Both refresh the UI' ]
     },
   ];
 
   // Index to keep track of the current question
   int currentQuestionIndex = 0;
 
+  // Index to keep track of the selected answer
+  int? selectedAnswerIndex;
+
   // Function to move to the next question
   void _nextQuestion() {
     setState(() {
       if (currentQuestionIndex < questions.length - 1) {
         currentQuestionIndex++;
+        selectedAnswerIndex = null; // Reset the selected answer
       }
     });
   }
@@ -72,6 +71,7 @@ class _TestState extends State<Test> {
     setState(() {
       if (currentQuestionIndex > 0) {
         currentQuestionIndex--;
+        selectedAnswerIndex = null; // Reset the selected answer
       }
     });
   }
@@ -101,13 +101,20 @@ class _TestState extends State<Test> {
           // Display the list of answers
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: currentAnswers.map((answer) {
+            children: currentAnswers.asMap().entries.map((entry) {
+              int index = entry.key;
+              String answer = entry.value;
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 5.0),
                 child: ElevatedButton(
                   onPressed: () {
-                    // Handle answer selection (if needed)
+                    setState(() {
+                      selectedAnswerIndex = index; // Update the selected answer index
+                    });
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: selectedAnswerIndex == index ? Colors.yellow : null, // Change the color if selected
+                  ),
                   child: Text(answer),
                 ),
               );

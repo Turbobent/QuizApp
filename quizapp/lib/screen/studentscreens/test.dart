@@ -112,8 +112,8 @@ class _TestState extends State<Test> {
             const SizedBox(height: 20),
             // Display the image related to the current question
             Container(
-              constraints: BoxConstraints(
-                maxHeight: 200, // Maximum height of the image
+              constraints: const BoxConstraints(
+                maxHeight: 280, // Maximum height of the image
                 maxWidth: double.infinity, // Ensure it uses full width available
               ),
               child: Image.asset(

@@ -83,15 +83,24 @@ class _TestState extends State<Test> {
   // Index to keep track of the current question
   int currentQuestionIndex = 0;
 
-  // Index to keep track of the selected answer
-  int? selectedAnswerIndex;
+  // List to store the selected answer index for each question
+  List<int?> selectedAnswers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the selectedAnswers list with null values for each question
+    selectedAnswers = List<int?>.filled(questions.length, null);
+  }
 
   // Function to move to the next question
   void _nextQuestion() {
     setState(() {
       if (currentQuestionIndex < questions.length - 1) {
         currentQuestionIndex++;
-        selectedAnswerIndex = null; // Reset the selected answer
+      } else {
+        // Handle the submission of the quiz here
+        _submitQuiz();
       }
     });
   }
@@ -101,9 +110,36 @@ class _TestState extends State<Test> {
     setState(() {
       if (currentQuestionIndex > 0) {
         currentQuestionIndex--;
-        selectedAnswerIndex = null; // Reset the selected answer
       }
     });
+  }
+
+  // Function to handle answer selection
+  void _selectAnswer(int index) {
+    setState(() {
+      selectedAnswers[currentQuestionIndex] = index; // Save the selected answer
+    });
+  }
+
+  // Function to handle quiz submission
+  void _submitQuiz() {
+    // Here you can process the selected answers, such as calculating the score
+    // For now, we just show a dialog with the selected answers
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Quiz Completed'),
+        content: Text('Selected Answers: $selectedAnswers'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -162,15 +198,13 @@ class _TestState extends State<Test> {
                   padding: const EdgeInsets.symmetric(vertical: 5.0),
                   child: ElevatedButton(
                     onPressed: () {
-                      setState(() {
-                        selectedAnswerIndex =
-                            index; // Update the selected answer index
-                      });
+                      _selectAnswer(index);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: selectedAnswerIndex == index
-                          ? Colors.yellow
-                          : null, // Change the color if selected
+                      backgroundColor:
+                          selectedAnswers[currentQuestionIndex] == index
+                              ? Colors.yellow
+                              : null, // Change the color if selected
                     ),
                     child: Text(answer),
                   ),
@@ -190,8 +224,10 @@ class _TestState extends State<Test> {
                 ),
                 // Next Button
                 ElevatedButton(
-                onPressed: _nextQuestion,
-                  child: Text(currentQuestionIndex < questions.length - 1 ? 'Next' : 'Submit'),
+                  onPressed: _nextQuestion,
+                  child: Text(currentQuestionIndex < questions.length - 1
+                      ? 'Next'
+                      : 'Submit'),
                 ),
               ],
             ),

@@ -30,22 +30,42 @@ class _TestState extends State<Test> {
   final List<Map<String, dynamic>> questions = [
     {
       'question': 'What is Flutter?',
-      'answers': ['1: A mobile SDK', '2: A programming language', '3: A database', '4: An IDE'],
+      'answers': [
+        'A mobile SDK',
+        'A programming language',
+        'A database',
+        'An IDE'
+      ],
       'image': 'assets/randers2.jpg',
     },
     {
       'question': 'What is Dart?',
-      'answers': ['A programming language', 'A web framework', 'A mobile SDK', 'A game engine'],
-      'image': 'assets/john.jpg',
+      'answers': [
+        'A programming language',
+        'A web framework',
+        'A mobile SDK',
+        'A game engine'
+      ],
+      //'image': 'assets/john.jpg',
     },
     {
       'question': 'Explain StatefulWidget in Flutter.',
-      'answers': ['A widget with state', 'A stateless widget', 'A UI component', 'A plugin'],
-      'image': 'assets/mike.jpg',
+      'answers': [
+        'A widget with state',
+        'A stateless widget',
+        'A UI component',
+        'A plugin'
+      ],
+      'image': null, // No image for this question
     },
     {
       'question': 'What is a Widget in Flutter?',
-      'answers': ['A UI component', 'A database', 'A mobile SDK', 'A programming language'],
+      'answers': [
+        'A UI component',
+        'A database',
+        'A mobile SDK',
+        'A programming language'
+      ],
       'image': 'assets/randers2.jpg',
     },
     {
@@ -90,7 +110,8 @@ class _TestState extends State<Test> {
   Widget build(BuildContext context) {
     // Get the current question, answers, and image
     final currentQuestion = questions[currentQuestionIndex]['question'];
-    final currentAnswers = questions[currentQuestionIndex]['answers'] as List<String>;
+    final currentAnswers =
+        questions[currentQuestionIndex]['answers'] as List<String>;
     final currentImage = questions[currentQuestionIndex]['image'];
 
     return Padding(
@@ -110,18 +131,27 @@ class _TestState extends State<Test> {
               style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 20),
-            // Display the image related to the current question
-            Container(
-              constraints: const BoxConstraints(
-                maxHeight: 280, // Maximum height of the image
-                maxWidth: double.infinity, // Ensure it uses full width available
+            // Conditionally display the image if it's available
+            if (currentImage != null)
+              Container(
+                constraints: const BoxConstraints(
+                  maxHeight: 280, // Maximum height of the image
+                  maxWidth:
+                      double.infinity, // Ensure it uses full width available
+                ),
+                child: Image.asset(
+                  currentImage,
+                  fit: BoxFit
+                      .contain, // Ensures the image covers the box without distortion
+                  errorBuilder: (context, error, stackTrace) {
+                    // Handle cases where the image cannot be loaded
+                    return const Center(
+                      child: Text('Image not available'),
+                    );
+                  },
+                ),
               ),
-              child: Image.asset(
-                currentImage,
-                fit: BoxFit.contain, // Ensures the image covers the box without distortion
-              ),
-            ),
-            const SizedBox(height: 20),
+            if (currentImage != null) const SizedBox(height: 20),
             // Display the list of answers
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,11 +163,14 @@ class _TestState extends State<Test> {
                   child: ElevatedButton(
                     onPressed: () {
                       setState(() {
-                        selectedAnswerIndex = index; // Update the selected answer index
+                        selectedAnswerIndex =
+                            index; // Update the selected answer index
                       });
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: selectedAnswerIndex == index ? Colors.yellow : null, // Change the color if selected
+                      backgroundColor: selectedAnswerIndex == index
+                          ? Colors.yellow
+                          : null, // Change the color if selected
                     ),
                     child: Text(answer),
                   ),
@@ -151,13 +184,15 @@ class _TestState extends State<Test> {
               children: <Widget>[
                 // Back Button
                 ElevatedButton(
-                  onPressed: currentQuestionIndex > 0 ? _previousQuestion : null,
+                  onPressed:
+                      currentQuestionIndex > 0 ? _previousQuestion : null,
                   child: const Text('Back'),
                 ),
                 // Next Button
                 ElevatedButton(
                   onPressed: currentQuestionIndex < questions.length - 1
-                      ? _nextQuestion : null,
+                      ? _nextQuestion
+                      : null,
                   child: const Text('Next'),
                 ),
               ],

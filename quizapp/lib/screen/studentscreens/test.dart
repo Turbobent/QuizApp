@@ -46,7 +46,7 @@ class _TestState extends State<Test> {
         'A mobile SDK',
         'A game engine'
       ],
-      //'image': 'assets/john.jpg',
+      'image': 'assets/john.jpg',
     },
     {
       'question': 'Explain StatefulWidget in Flutter.',
@@ -66,7 +66,7 @@ class _TestState extends State<Test> {
         'A mobile SDK',
         'A programming language'
       ],
-      'image': 'assets/randers2.jpg',
+      'image': 'assets/mike.jpg',
     },
     {
       'question': 'What is the difference between hot reload and hot restart?',
@@ -76,7 +76,7 @@ class _TestState extends State<Test> {
         'Both restart the app',
         'Both refresh the UI'
       ],
-      'image': 'assets/randers2.jpg',
+      'image': 'assets/randers3.jpg',
     },
   ];
 
@@ -190,10 +190,8 @@ class _TestState extends State<Test> {
                 ),
                 // Next Button
                 ElevatedButton(
-                  onPressed: currentQuestionIndex < questions.length - 1
-                      ? _nextQuestion
-                      : null,
-                  child: const Text('Next'),
+                onPressed: _nextQuestion,
+                  child: Text(currentQuestionIndex < questions.length - 1 ? 'Next' : 'Submit'),
                 ),
               ],
             ),

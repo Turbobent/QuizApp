@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:quizapp/screen/studentscreens/studentHome.dart';
 
 class TestResults extends StatelessWidget {
   final List<int?> selectedAnswers;
@@ -58,6 +58,20 @@ class TestResults extends StatelessWidget {
                     ),
                   );
                 },
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Add the Home Button
+            Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const StudentHome()),
+                    (route) => false,
+                  );
+                },
+                child: const Text('Home'),
               ),
             ),
           ],

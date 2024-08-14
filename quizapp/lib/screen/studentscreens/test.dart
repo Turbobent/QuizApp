@@ -57,15 +57,15 @@ class _TestState extends State<Test> {
       'image': 'assets/john.jpg',
     },
     {
-     'question': 'Explain StatefulWidget in Flutter.',
+      'question': 'Explain StatefulWidget in Flutter.',
       'answers': [
         'A widget with state',
         'A stateless widget',
         'A UI component',
         'A plugin'
       ],
-         'correctAnswerIndex': 0,
-      'image': null, // No image for this question
+      'correctAnswerIndex': 0,
+      'image': null,
     },
     {
       'question': 'What is a Widget in Flutter?',
@@ -75,7 +75,7 @@ class _TestState extends State<Test> {
         'A mobile SDK',
         'A programming language'
       ],
-         'correctAnswerIndex': 0,
+      'correctAnswerIndex': 0,
       'image': 'assets/mike.jpg',
     },
     {
@@ -86,11 +86,10 @@ class _TestState extends State<Test> {
         'Both restart the app',
         'Both refresh the UI'
       ],
-         'correctAnswerIndex': 0,
+      'correctAnswerIndex': 0,
       'image': 'assets/randers3.jpg',
     },
   ];
- 
 
   int currentQuestionIndex = 0;
   List<int?> selectedAnswers = [];
@@ -106,7 +105,7 @@ class _TestState extends State<Test> {
       if (currentQuestionIndex < questions.length - 1) {
         currentQuestionIndex++;
       } else {
-        _submitQuiz();
+        _showSubmitConfirmation();
       }
     });
   }
@@ -123,6 +122,33 @@ class _TestState extends State<Test> {
     setState(() {
       selectedAnswers[currentQuestionIndex] = index;
     });
+  }
+
+  void _showSubmitConfirmation() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Submission'),
+          content: const Text('Are you sure you want to submit your answers?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+                _submitQuiz(); // Submit the quiz
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _submitQuiz() {

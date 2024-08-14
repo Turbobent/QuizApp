@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:quizapp/screen/studentscreens/testResults.dart';
 
 void main() => runApp(const TestApp());
 
@@ -14,6 +15,12 @@ class TestApp extends StatelessWidget {
         ),
         body: const Test(),
       ),
+      routes: {
+        '/testResults': (context) => const TestResults(
+              selectedAnswers: [],
+              questions: [],
+            ),
+      },
     );
   }
 }
@@ -26,7 +33,6 @@ class Test extends StatefulWidget {
 }
 
 class _TestState extends State<Test> {
-  // Hardcoded list of questions, answers, and images
   final List<Map<String, dynamic>> questions = [
     {
       'question': 'What is Flutter?',
@@ -36,6 +42,7 @@ class _TestState extends State<Test> {
         'A database',
         'An IDE'
       ],
+      'correctAnswerIndex': 0,
       'image': 'assets/randers2.jpg',
     },
     {
@@ -46,16 +53,18 @@ class _TestState extends State<Test> {
         'A mobile SDK',
         'A game engine'
       ],
+      'correctAnswerIndex': 0,
       'image': 'assets/john.jpg',
     },
     {
-      'question': 'Explain StatefulWidget in Flutter.',
+     'question': 'Explain StatefulWidget in Flutter.',
       'answers': [
         'A widget with state',
         'A stateless widget',
         'A UI component',
         'A plugin'
       ],
+         'correctAnswerIndex': 0,
       'image': null, // No image for this question
     },
     {
@@ -66,6 +75,7 @@ class _TestState extends State<Test> {
         'A mobile SDK',
         'A programming language'
       ],
+         'correctAnswerIndex': 0,
       'image': 'assets/mike.jpg',
     },
     {
@@ -76,36 +86,31 @@ class _TestState extends State<Test> {
         'Both restart the app',
         'Both refresh the UI'
       ],
+         'correctAnswerIndex': 0,
       'image': 'assets/randers3.jpg',
     },
   ];
+ 
 
-  // Index to keep track of the current question
   int currentQuestionIndex = 0;
-
-  // List to store the selected answer index for each question
   List<int?> selectedAnswers = [];
 
   @override
   void initState() {
     super.initState();
-    // Initialize the selectedAnswers list with null values for each question
     selectedAnswers = List<int?>.filled(questions.length, null);
   }
 
-  // Function to move to the next question
   void _nextQuestion() {
     setState(() {
       if (currentQuestionIndex < questions.length - 1) {
         currentQuestionIndex++;
       } else {
-        // Handle the submission of the quiz here
         _submitQuiz();
       }
     });
   }
 
-  // Function to move to the previous question
   void _previousQuestion() {
     setState(() {
       if (currentQuestionIndex > 0) {
@@ -114,40 +119,28 @@ class _TestState extends State<Test> {
     });
   }
 
-  // Function to handle answer selection
   void _selectAnswer(int index) {
     setState(() {
-      selectedAnswers[currentQuestionIndex] = index; // Save the selected answer
+      selectedAnswers[currentQuestionIndex] = index;
     });
   }
 
-  // Function to handle quiz submission
   void _submitQuiz() {
-    // Here you can process the selected answers, such as calculating the score
-    // For now, we just show a dialog with the selected answers
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Quiz Completed'),
-        content: Text('Selected Answers: $selectedAnswers'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('OK'),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TestResults(
+          selectedAnswers: selectedAnswers,
+          questions: questions,
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get the current question, answers, and image
     final currentQuestion = questions[currentQuestionIndex]['question'];
-    final currentAnswers =
-        questions[currentQuestionIndex]['answers'] as List<String>;
+    final currentAnswers = questions[currentQuestionIndex]['answers'] as List<String>;
     final currentImage = questions[currentQuestionIndex]['image'];
 
     return Padding(
@@ -156,7 +149,6 @@ class _TestState extends State<Test> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            // Display the current question
             Text(
               'Question ${currentQuestionIndex + 1}/${questions.length}',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
@@ -167,20 +159,16 @@ class _TestState extends State<Test> {
               style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 20),
-            // Conditionally display the image if it's available
             if (currentImage != null)
               Container(
                 constraints: const BoxConstraints(
-                  maxHeight: 280, // Maximum height of the image
-                  maxWidth:
-                      double.infinity, // Ensure it uses full width available
+                  maxHeight: 280,
+                  maxWidth: double.infinity,
                 ),
                 child: Image.asset(
                   currentImage,
-                  fit: BoxFit
-                      .contain, // Ensures the image covers the box without distortion
+                  fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
-                    // Handle cases where the image cannot be loaded
                     return const Center(
                       child: Text('Image not available'),
                     );
@@ -188,7 +176,6 @@ class _TestState extends State<Test> {
                 ),
               ),
             if (currentImage != null) const SizedBox(height: 20),
-            // Display the list of answers
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: currentAnswers.asMap().entries.map((entry) {
@@ -201,10 +188,9 @@ class _TestState extends State<Test> {
                       _selectAnswer(index);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          selectedAnswers[currentQuestionIndex] == index
-                              ? Colors.yellow
-                              : null, // Change the color if selected
+                      backgroundColor: selectedAnswers[currentQuestionIndex] == index
+                          ? Colors.yellow
+                          : null,
                     ),
                     child: Text(answer),
                   ),
@@ -212,17 +198,13 @@ class _TestState extends State<Test> {
               }).toList(),
             ),
             const SizedBox(height: 40),
-            // Row for the buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                // Back Button
                 ElevatedButton(
-                  onPressed:
-                      currentQuestionIndex > 0 ? _previousQuestion : null,
+                  onPressed: currentQuestionIndex > 0 ? _previousQuestion : null,
                   child: const Text('Back'),
                 ),
-                // Next Button
                 ElevatedButton(
                   onPressed: _nextQuestion,
                   child: Text(currentQuestionIndex < questions.length - 1

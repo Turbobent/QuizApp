@@ -4,7 +4,7 @@ import 'package:quizapp/screen/studentscreens/test.dart';
 void main() => runApp(const StudentHome());
 
 class StudentHome extends StatelessWidget {
-  const StudentHome({Key? key}) : super(key: key);
+  const StudentHome({super.key});
 
   @override
   Widget build(BuildContext context) {

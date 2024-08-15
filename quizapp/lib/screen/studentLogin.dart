@@ -1,4 +1,3 @@
-// ignore: file_names
 import 'package:flutter/material.dart';
 import 'package:quizapp/screen/home.dart';
 import 'package:quizapp/main.dart';
@@ -6,7 +5,7 @@ import 'package:quizapp/screen/studentscreens/studentHome.dart';
 void main() => runApp(const StudentLogin());
 
 class StudentLogin extends StatelessWidget {
-  const StudentLogin({Key? key}) : super(key: key);
+  const StudentLogin({super.key});
 
   static const String _title = 'Mercantec Quiz login';
 
@@ -19,18 +18,17 @@ class StudentLogin extends StatelessWidget {
         body: const MyStatefulWidget(),
       ),
       routes: {
-        '/studentLogin': (context) => const StudentLogin(), // Define the route for student login
-        '/main': (context) => const MyApp(), // Define the route for student login
-        '/home': (context) => Home(), // Define the route for student login
-        '/studentHome': (context) => const StudentHome(), // Define the route for student login
-
+        '/studentLogin': (context) => const StudentLogin(), 
+        '/main': (context) => const MyApp(), 
+        '/home': (context) => Home(), 
+        '/studentHome': (context) => const StudentHome(), 
       },
     );
   }
 }
 
 class MyStatefulWidget extends StatefulWidget {
-  const MyStatefulWidget({Key? key}) : super(key: key);
+  const MyStatefulWidget({super.key});
 
   @override
   State<MyStatefulWidget> createState() => _MyStatefulWidgetState();
@@ -91,7 +89,6 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
                   },
                 )
             ),
-          
           ],
         ));
   }

@@ -50,7 +50,7 @@ class TestResults extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        'Your Answer: ${questions[index]['answers'][selectedAnswers[index]!]}',
+                        'Your Answer: ${selectedAnswers[index] != null ? questions[index]['answers'][selectedAnswers[index]!] : "No answer selected"}',
                         style: TextStyle(
                           color: isCorrect ? Colors.green : Colors.red,
                         ),

@@ -132,6 +132,8 @@ class _TestState extends State<Test> {
   void _nextQuestion() {
     setState(() {
       if (currentQuestionIndex < questions.length - 1) {
+        //make like they have answered now answered
+        
         currentQuestionIndex++;
         _startTimer(); // Restart the timer for the next question
       } else {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:quizapp/screen/studentscreens/test.dart';
+import 'package:quizapp/screen/studentscreens/takenTests.dart';
 
 void main() => runApp(const StudentHome());
 
@@ -37,6 +38,30 @@ class StudentHome extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              InkWell(
+                onTap: () {
+                  // Navigate to the Taken Tests screen
+                  Navigator.of(context).pushNamed('/takenTests');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12.0),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Taken Test',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 20),
               const Text(
                 'Available Tests',
@@ -86,6 +111,7 @@ class StudentHome extends StatelessWidget {
       ),
       routes: {
         '/test': (context) => const Test(),
+        '/takenTests': (context) => const TakenTests(),
       },
     );
   }

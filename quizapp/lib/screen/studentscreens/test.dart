@@ -132,21 +132,17 @@ class _TestState extends State<Test> {
   void _nextQuestion() {
     setState(() {
       if (currentQuestionIndex < questions.length - 1) {
-        //make like they have answered now answered
-        
+        // Automatically mark the current question as unanswered if no answer is selected
+        if (selectedAnswers[currentQuestionIndex] == null) {
+          selectedAnswers[currentQuestionIndex] =
+              -1; // or any default value indicating no answer
+        }
+
         currentQuestionIndex++;
         _startTimer(); // Restart the timer for the next question
       } else {
-        _showSubmitConfirmation();
-      }
-    });
-  }
-
-  void _previousQuestion() {
-    setState(() {
-      if (currentQuestionIndex > 0) {
-        currentQuestionIndex--;
-        _startTimer(); // Restart the timer for the previous question
+        // Automatically submit if it's the last question
+        _submitQuiz();
       }
     });
   }
@@ -200,19 +196,20 @@ class _TestState extends State<Test> {
   @override
   Widget build(BuildContext context) {
     final currentQuestion = questions[currentQuestionIndex]['question'];
-    final currentAnswers = questions[currentQuestionIndex]['answers'] as List<String>;
+    final currentAnswers =
+        questions[currentQuestionIndex]['answers'] as List<String>;
     final currentImage = questions[currentQuestionIndex]['image'];
 
     return Scaffold(
       appBar: AppBar(
-  
         actions: [
           Padding(
             padding: const EdgeInsets.all(10.0),
             child: Center(
               child: Text(
                 'Time: $_timeRemaining',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -226,7 +223,8 @@ class _TestState extends State<Test> {
             children: <Widget>[
               Text(
                 'Question ${currentQuestionIndex + 1}/${questions.length}',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
               ),
               const SizedBox(height: 20),
               Text(
@@ -263,9 +261,10 @@ class _TestState extends State<Test> {
                         _selectAnswer(index);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedAnswers[currentQuestionIndex] == index
-                            ? Colors.yellow
-                            : null,
+                        backgroundColor:
+                            selectedAnswers[currentQuestionIndex] == index
+                                ? Colors.yellow
+                                : null,
                       ),
                       child: Text(answer),
                     ),
@@ -276,10 +275,6 @@ class _TestState extends State<Test> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  ElevatedButton(
-                    onPressed: currentQuestionIndex > 0 ? _previousQuestion : null,
-                    child: const Text('Back'),
-                  ),
                   ElevatedButton(
                     onPressed: _nextQuestion,
                     child: Text(currentQuestionIndex < questions.length - 1

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:quizapp/screen/home.dart';
 import 'package:quizapp/main.dart';
 import 'package:quizapp/screen/studentscreens/studentHome.dart';
@@ -38,6 +40,53 @@ class MyStatefulWidget extends StatefulWidget {
 class _MyStatefulWidgetState extends State<MyStatefulWidget> {
   TextEditingController nameController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
+  bool isLoading = false;
+
+  Future<void> login() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    final response = await http.post(
+      Uri.parse(
+          'https://mercantec-quiz.onrender.com/api/Users/login'), // Replace with your API endpoint
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'email': nameController.text,
+        'password': passwordController.text,
+      }),
+    );
+
+    setState(() {
+      isLoading = false;
+    });
+
+    if (response.statusCode == 200) {
+      // Successful login
+      Navigator.of(context).pushNamed('/studentHome');
+    } else {
+      // Handle errors
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Login Failed'),
+            content: const Text('Incorrect email or password.'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +128,7 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
             padding: const EdgeInsets.all(10),
             child: TextField(
               controller: passwordController,
-              obscureText: true, // This makes the text obscure (hidden)
+              obscureText: true,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: 'Password',
@@ -88,7 +137,7 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pushNamed('/main'); // Navigate to main
+              Navigator.of(context).pushNamed('/studentHome');
             },
             child: const Text('Teacher Login'),
           ),
@@ -96,13 +145,10 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
             height: 50,
             padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
             child: ElevatedButton(
-              child: const Text('Login'),
-              onPressed: () {
-                print(nameController.text);
-                print(passwordController.text);
-                Navigator.of(context)
-                    .pushNamed('/studentHome'); // Navigate to student home
-              },
+              child: isLoading
+                  ? CircularProgressIndicator(color: Colors.white)
+                  : const Text('Login'),
+              onPressed: isLoading ? null : login,
             ),
           ),
         ],

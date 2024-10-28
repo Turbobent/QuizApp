@@ -40,8 +40,14 @@ class TestResults extends StatelessWidget {
               child: ListView.builder(
                 itemCount: questions.length,
                 itemBuilder: (context, index) {
-                  bool isCorrect = selectedAnswers[index] ==
-                      questions[index]['correctAnswerIndex'];
+                  int? selectedAnswerIndex = selectedAnswers[index];
+                  bool isCorrect = selectedAnswerIndex != null &&
+                      selectedAnswerIndex >= 0 &&
+                      selectedAnswerIndex <
+                          questions[index]['answers'].length &&
+                      selectedAnswerIndex ==
+                          questions[index]['correctAnswerIndex'];
+
                   return Card(
                     color: isCorrect ? Colors.green[100] : Colors.red[100],
                     child: ListTile(
@@ -50,7 +56,7 @@ class TestResults extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        'Your Answer: ${selectedAnswers[index] != null ? questions[index]['answers'][selectedAnswers[index]!] : "No answer selected"}',
+                        'Your Answer: ${selectedAnswerIndex != null && selectedAnswerIndex >= 0 && selectedAnswerIndex < questions[index]['answers'].length ? questions[index]['answers'][selectedAnswerIndex] : "No answer selected"}',
                         style: TextStyle(
                           color: isCorrect ? Colors.green : Colors.red,
                         ),
@@ -66,7 +72,8 @@ class TestResults extends StatelessWidget {
                 onPressed: () {
                   Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (context) => const StudentHome()),
+                    MaterialPageRoute(
+                        builder: (context) => const StudentHome()),
                     (route) => false,
                   );
                 },

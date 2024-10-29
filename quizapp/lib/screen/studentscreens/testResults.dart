@@ -137,7 +137,8 @@ class _TestResultsState extends State<TestResults>
           Padding(
             padding: const EdgeInsets.all(10.0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center, // Centers vertically
+              crossAxisAlignment: CrossAxisAlignment.center, // Centers horizontally
               children: <Widget>[
                 Text(
                   'Your Score: $score/${widget.questions.length}',
@@ -145,61 +146,25 @@ class _TestResultsState extends State<TestResults>
                       fontWeight: FontWeight.bold, fontSize: 24),
                 ),
                 const SizedBox(height: 20),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: widget.questions.length,
-                    itemBuilder: (context, index) {
-                      int? selectedAnswerIndex = widget.selectedAnswers[index];
-                      bool isCorrect = selectedAnswerIndex != null &&
-                          selectedAnswerIndex >= 0 &&
-                          selectedAnswerIndex <
-                              widget.questions[index]['answers'].length &&
-                          selectedAnswerIndex ==
-                              widget.questions[index]['correctAnswerIndex'];
-
-                      return Card(
-                        color: isCorrect ? Colors.green[100] : Colors.red[100],
-                        child: ListTile(
-                          title: Text(
-                            widget.questions[index]['question'],
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(
-                            'Your Answer: ${selectedAnswerIndex != null && selectedAnswerIndex >= 0 && selectedAnswerIndex < widget.questions[index]['answers'].length ? widget.questions[index]['answers'][selectedAnswerIndex] : "No answer selected"}',
-                            style: TextStyle(
-                              color: isCorrect ? Colors.green : Colors.red,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 20),
                 // Home Button
                 Center(
-                  child: Stack(
-                    alignment: Alignment.center, // Centers the children
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const StudentHome()),
-                            (route) => false,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 50, vertical: 20),
-                        ),
-                        child: const Text(
-                          'Home',
-                          style: TextStyle(fontSize: 18),
-                        ),
-                      ),
-                    ],
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const StudentHome()),
+                        (route) => false,
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 50, vertical: 20),
+                    ),
+                    child: const Text(
+                      'Home',
+                      style: TextStyle(fontSize: 18),
+                    ),
                   ),
                 ),
               ],

@@ -107,13 +107,13 @@ class _StudentHomeState extends State<StudentHome> {
 
   @override
   Widget build(BuildContext context) {
-    const String _title = 'Mercantec Quiz';
+    const String title = 'Mercantec Quiz';
 
     return MaterialApp(
-      title: _title,
+      title: title,
       home: Scaffold(
         appBar: AppBar(
-          title: const Text(_title),
+          title: const Text(title),
         ),
         body: Padding(
           padding: const EdgeInsets.all(16.0),

@@ -139,10 +139,10 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
             height: 50,
             padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
             child: ElevatedButton(
+              onPressed: isLoading ? null : login,
               child: isLoading
                   ? CircularProgressIndicator(color: Colors.white)
                   : const Text('Login'),
-              onPressed: isLoading ? null : login,
             ),
           ),
         ],

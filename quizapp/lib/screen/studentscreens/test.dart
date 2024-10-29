@@ -43,7 +43,7 @@ class _TestState extends State<Test> {
         'A database',
         'An IDE'
       ],
-      'correctAnswerIndex': 1,
+      'correctAnswerIndex': 0,
       'image': 'assets/randers2.jpg',
       'timer': 10,
     },
@@ -55,7 +55,7 @@ class _TestState extends State<Test> {
         'A mobile SDK',
         'A game engine'
       ],
-      'correctAnswerIndex': 3,
+      'correctAnswerIndex': 0,
       'image': 'assets/john.jpg',
       'timer': 30,
     },
@@ -67,7 +67,7 @@ class _TestState extends State<Test> {
         'A UI component',
         'A plugin'
       ],
-      'correctAnswerIndex': 2,
+      'correctAnswerIndex': 0,
       'image': null,
       'timer': 5,
     },

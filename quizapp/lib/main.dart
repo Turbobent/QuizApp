@@ -57,7 +57,7 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
         'Content-Type': 'application/json; charset=UTF-8',
       },
       body: jsonEncode(<String, String>{
-        'email': nameController.text,
+        'username': nameController.text,
         'password': passwordController.text,
       }),
     );
@@ -84,7 +84,7 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
         builder: (BuildContext context) {
           return AlertDialog(
             title: const Text('Login Failed'),
-            content: const Text('Incorrect email or password.'),
+            content: const Text('Incorrect username or password.'),
             actions: <Widget>[
               TextButton(
                 onPressed: () {
@@ -131,7 +131,7 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
               controller: nameController,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                labelText: 'Email',
+                labelText: 'Username',
               ),
             ),
           ),

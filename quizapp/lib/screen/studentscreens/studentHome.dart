@@ -15,8 +15,13 @@ class StudentHome extends StatefulWidget {
 }
 
 class _StudentHomeState extends State<StudentHome> {
-  List<String> lockedQuiz = [];
-  List<String> openQuiz = ['Rust', 'Loops', 'Array', 'Loops'];
+  List<Map<String, dynamic>> lockedQuiz = []; // Updated to include IDs
+  List<Map<String, dynamic>> openQuiz = [
+    {'id': 1, 'title': 'Rust'},
+    {'id': 2, 'title': 'Loops'},
+    {'id': 3, 'title': 'Array'},
+    {'id': 4, 'title': 'Loops'},
+  ];
   List<String> takenTest = ['HTML Basics', 'C# Fundamentals'];
 
   final SecureStorageService _secureStorage = SecureStorageService();
@@ -35,8 +40,7 @@ class _StudentHomeState extends State<StudentHome> {
         Uri.parse('https://mercantec-quiz.onrender.com/api/quizs'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization':
-              'Bearer $token', // Include the token in the Authorization header
+          'Authorization': 'Bearer $token',
         },
       );
 
@@ -44,52 +48,45 @@ class _StudentHomeState extends State<StudentHome> {
         var jsonResponse = jsonDecode(response.body);
         print('Quizzes fetched successfully: $jsonResponse');
 
-        List<String> quizzes =
-            List<String>.from(jsonResponse.map((quiz) => quiz['title']));
+        // Parse the quizzes to include both ID and title for lockedQuiz
+        List<Map<String, dynamic>> quizzes = List<Map<String, dynamic>>.from(
+          jsonResponse.map((quiz) => {
+                'id': quiz['id'], // Assuming each quiz has an 'id' field
+                'title': quiz['title'],
+              }),
+        );
 
         setState(() {
           lockedQuiz = quizzes;
         });
       } else {
         print('Failed to fetch quizzes: ${response.statusCode}');
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text("Failed to fetch quizzes"),
-              content: Text('Error: ${response.body}'),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text("OK"),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
+        _showErrorDialog('Failed to fetch quizzes: ${response.body}');
       }
     } catch (e) {
       print('An error occurred: $e');
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text("Error"),
-            content: const Text('An error occurred. Please try again.'),
-            actions: <Widget>[
-              TextButton(
-                child: const Text("OK"),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        },
-      );
+      _showErrorDialog('An error occurred. Please try again.');
     }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Error"),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: const Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -115,7 +112,6 @@ class _StudentHomeState extends State<StudentHome> {
             children: <Widget>[
               InkWell(
                 onTap: () {
-                  // Navigate to the Taken Quiz screen
                   Navigator.of(context).pushNamed('/takenTests');
                 },
                 child: Container(
@@ -149,9 +145,14 @@ class _StudentHomeState extends State<StudentHome> {
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 8.0),
                       child: ListTile(
-                        title: Text(openQuiz[index]),
+                        title: Text(openQuiz[index]['title']),
                         onTap: () {
-                          Navigator.of(context).pushNamed('/test');
+                          final quizID = openQuiz[index]['id'];
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => Test(quizID: quizID),
+                            ),
+                          );
                         },
                       ),
                     );
@@ -164,7 +165,6 @@ class _StudentHomeState extends State<StudentHome> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
               ),
               const SizedBox(height: 20),
-              // Displaying fetched locked quizzes
               Expanded(
                 child: ListView.builder(
                   itemCount: lockedQuiz.length,
@@ -172,10 +172,14 @@ class _StudentHomeState extends State<StudentHome> {
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 8.0),
                       child: ListTile(
-                        title: Text(lockedQuiz[
-                            index]), // Displaying the quizzes from API
+                        title: Text(lockedQuiz[index]['title']),
                         onTap: () {
-                          // Handle tap on the test name if needed
+                          final quizID = lockedQuiz[index]['id'];
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => Test(quizID: quizID),
+                            ),
+                          );
                         },
                       ),
                     );
@@ -187,7 +191,6 @@ class _StudentHomeState extends State<StudentHome> {
         ),
       ),
       routes: {
-        '/test': (context) => const Test(),
         '/takenTests': (context) => const TakenTests(),
       },
     );

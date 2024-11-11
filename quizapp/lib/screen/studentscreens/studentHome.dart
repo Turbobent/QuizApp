@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:quizapp/screen/studentscreens/test.dart';
 import 'package:quizapp/screen/studentscreens/takenTests.dart';
+import 'package:quizapp/services/flutter_secure_storage.dart';
 
 void main() => runApp(const StudentHome());
 
@@ -14,31 +15,28 @@ class StudentHome extends StatefulWidget {
 }
 
 class _StudentHomeState extends State<StudentHome> {
-  // List of test names for locked quizzes (initialize as empty)
   List<String> lockedQuiz = [];
+  List<String> openQuiz = ['Rust', 'Loops', 'Array', 'Loops'];
+  List<String> takenTest = ['HTML Basics', 'C# Fundamentals'];
 
-  // List of open test names (static for now)
-  List<String> openQuiz = [
-    'Rust',
-    'Loops',
-    'Array',
-    'Loops',
-  ];
+  final SecureStorageService _secureStorage = SecureStorageService();
 
-  // List of taken tests (static for now, but can be fetched)
-  List<String> takenTest = [
-    'HTML Basics',
-    'C# Fundamentals',
-  ];
-
-  // Function to fetch quizzes from the API
   Future<void> fetchQuizzes() async {
     try {
+      // Retrieve the token from secure storage
+      final token = await _secureStorage.readToken();
+
+      // Ensure that the token exists
+      if (token == null) {
+        throw Exception("Token not found. Please log in again.");
+      }
+
       final response = await http.get(
-        Uri.parse(
-            'https://mercantec-quiz.onrender.com/api/quizs'), // Your API endpoint
+        Uri.parse('https://mercantec-quiz.onrender.com/api/quizs'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization':
+              'Bearer $token', // Include the token in the Authorization header
         },
       );
 
@@ -46,16 +44,13 @@ class _StudentHomeState extends State<StudentHome> {
         var jsonResponse = jsonDecode(response.body);
         print('Quizzes fetched successfully: $jsonResponse');
 
-        // Assuming the response contains a list of quiz titles in JSON format
         List<String> quizzes =
             List<String>.from(jsonResponse.map((quiz) => quiz['title']));
 
         setState(() {
-          lockedQuiz =
-              quizzes; // Update the lockedQuiz with the fetched quizzes
+          lockedQuiz = quizzes;
         });
       } else {
-        // Show error message
         print('Failed to fetch quizzes: ${response.statusCode}');
         showDialog(
           context: context,
@@ -77,7 +72,6 @@ class _StudentHomeState extends State<StudentHome> {
       }
     } catch (e) {
       print('An error occurred: $e');
-      // Show network error dialog
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -101,7 +95,6 @@ class _StudentHomeState extends State<StudentHome> {
   @override
   void initState() {
     super.initState();
-    // Fetch quizzes when the widget is initialized
     fetchQuizzes();
   }
 

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:quizapp/screen/home.dart';
 import 'package:quizapp/main.dart';
 import 'package:quizapp/screen/studentscreens/studentHome.dart';
+import 'package:quizapp/services/flutter_secure_storage.dart';
 
 void main() => runApp(const StudentLogin());
 
@@ -42,14 +43,16 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
   TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
 
+  // Create an instance of SecureStorageService
+  final SecureStorageService _secureStorage = SecureStorageService();
+
   Future<void> login() async {
     setState(() {
       isLoading = true;
     });
 
     final response = await http.post(
-      Uri.parse(
-          'https://mercantec-quiz.onrender.com/api/Users/login'), // Replace with your API endpoint
+      Uri.parse('https://mercantec-quiz.onrender.com/api/Users/login'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },
@@ -64,7 +67,15 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
     });
 
     if (response.statusCode == 200) {
-      // Successful login
+      // Parse the token from the response body (assuming it's JSON)
+      final responseBody = jsonDecode(response.body);
+      final token = responseBody[
+          'token']; // Adjust according to the actual JSON structure
+
+      // Save the token to secure storage
+      await _secureStorage.writeToken(token);
+
+      // Navigate to the next screen
       Navigator.of(context).pushNamed('/studentHome');
     } else {
       // Handle errors

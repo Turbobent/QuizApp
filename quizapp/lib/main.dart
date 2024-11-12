@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:quizapp/screen/home.dart';
 import 'package:quizapp/main.dart';
 import 'package:quizapp/screen/studentscreens/studentHome.dart';
 import 'package:quizapp/services/flutter_secure_storage.dart';
@@ -24,7 +23,6 @@ class StudentLogin extends StatelessWidget {
       routes: {
         '/studentLogin': (context) => const StudentLogin(),
         '/main': (context) => const StudentLogin(),
-        '/home': (context) => Home(),
         '/studentHome': (context) => const StudentHome(),
       },
     );
@@ -67,13 +65,16 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
     });
 
     if (response.statusCode == 200) {
-      // Parse the token from the response body (assuming it's JSON)
+      // Parse the token and userID from the response body
       final responseBody = jsonDecode(response.body);
-      final token = responseBody[
-          'token']; // Adjust according to the actual JSON structure
+      final token =
+          responseBody['token']; // Adjust according to your JSON structure
+      final userID = responseBody['id']
+          .toString(); // Ensure this matches your JSON structure
 
-      // Save the token to secure storage
+      // Save the token and userID to secure storage
       await _secureStorage.writeToken(token);
+      await _secureStorage.writeUserID(userID);
 
       // Navigate to the next screen
       Navigator.of(context).pushNamed('/studentHome');

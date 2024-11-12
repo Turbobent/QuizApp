@@ -1,6 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:quizapp/screen/studentscreens/studentHome.dart';
+import 'package:quizapp/services/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 /// Entry point of the application.
 void main() {
@@ -38,7 +41,7 @@ class Emoji {
 
 /// Stateful widget to display test results and falling emojis if under threshold.
 class TestResults extends StatefulWidget {
-  final List<int?> selectedAnswers;
+  final List<List<bool>> selectedAnswers; // Updated type
   final List<Map<String, dynamic>> questions;
 
   const TestResults({
@@ -57,6 +60,11 @@ class _TestResultsState extends State<TestResults>
   late final bool _isUnderThreshold;
   final Random _random = Random();
   final int _emojiCount = 15;
+  final SecureStorageService _secureStorage = SecureStorageService();
+
+  // Add questions and selectedAnswers as class-level variables
+  List<Map<String, dynamic>> questions = [];
+  List<List<bool>> selectedAnswers = [];
 
   // List to hold properties of each emoji
   late final List<Emoji> _emojis;
@@ -74,15 +82,15 @@ class _TestResultsState extends State<TestResults>
     // Initialize emojis with random properties
     _emojis = List.generate(_emojiCount, (_) {
       return Emoji(
-        horizontalPosition: _random.nextDouble(), // Random horizontal position
-        speed: 0.5 + _random.nextDouble(), // Speed between 0.5 and 1.5
-        initialDelay: _random.nextDouble(), // Delay between 0.0 and 1.0
+        horizontalPosition: _random.nextDouble(),
+        speed: 0.5 + _random.nextDouble(),
+        initialDelay: _random.nextDouble(),
       );
     });
 
     // Set up the animation controller
     _controller = AnimationController(
-      duration: const Duration(seconds: 5), // Duration can be adjusted
+      duration: const Duration(seconds: 5),
       vsync: this,
     )..repeat();
 
@@ -90,18 +98,84 @@ class _TestResultsState extends State<TestResults>
     if (!_isUnderThreshold) {
       _controller.stop();
     }
+
+    // Fetch questions with correct answers
+    _fetchQuestions();
+  }
+
+  Future<void> _fetchQuestions() async {
+    try {
+      final token = await _secureStorage.readToken();
+      if (token == null) {
+        throw Exception("Token not found. Please log in again.");
+      }
+
+      final response = await http.get(
+        Uri.parse('https://mercantec-quiz.onrender.com/api/Questions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          questions = data.map((item) {
+            return {
+              'id': item['id'],
+              'question': item['title'],
+              'possibleAnswers': List<String>.from(item['possibleAnswers']),
+              'correctAnswer': List<int>.from(item['correctAnswer'] ?? []),
+              'time': item['time'] ?? 30,
+            };
+          }).toList();
+
+          // Initialize selectedAnswers based on the length of possible answers for each question
+          selectedAnswers = questions
+              .map((q) => List<bool>.filled(q['possibleAnswers'].length, false))
+              .toList();
+        });
+      } else {
+        print('Failed to load questions: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching questions: $e');
+    }
   }
 
   /// Helper method to calculate the user's score.
   int _calculateScore() {
     int score = 0;
+
     for (int i = 0; i < widget.questions.length; i++) {
-      if (widget.selectedAnswers[i] ==
-          widget.questions[i]['correctAnswerIndex']) {
+      List<bool> selectedForQuestion = widget.selectedAnswers[i];
+      List<int> correctAnswerIndices =
+          List<int>.from(widget.questions[i]['correctAnswer'] ?? []);
+
+      // Get indices of selected answers
+      List<int> selectedIndices = [];
+      for (int j = 0; j < selectedForQuestion.length; j++) {
+        if (selectedForQuestion[j]) {
+          selectedIndices.add(j);
+        }
+      }
+
+      // Check if selected indices match the correct answer indices
+      if (_listsMatch(selectedIndices, correctAnswerIndices)) {
         score++;
       }
     }
+
     return score;
+  }
+
+  bool _listsMatch(List<int> list1, List<int> list2) {
+    if (list1.length != list2.length) return false;
+    for (int element in list1) {
+      if (!list2.contains(element)) return false;
+    }
+    return true;
   }
 
   @override
@@ -138,7 +212,8 @@ class _TestResultsState extends State<TestResults>
             padding: const EdgeInsets.all(10.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center, // Centers vertically
-              crossAxisAlignment: CrossAxisAlignment.center, // Centers horizontally
+              crossAxisAlignment:
+                  CrossAxisAlignment.center, // Centers horizontally
               children: <Widget>[
                 Text(
                   'Your Score: $score/${widget.questions.length}',

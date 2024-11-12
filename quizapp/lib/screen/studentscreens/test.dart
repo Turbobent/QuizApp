@@ -3,34 +3,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:quizapp/screen/studentscreens/testResults.dart';
-import 'package:quizapp/services/flutter_secure_storage.dart'; // Import the secure storage service
-
-void main() => runApp(const TestApp());
-
-class TestApp extends StatelessWidget {
-  const TestApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Quiz App'),
-        ),
-        body: const Test(quizID: 0), // Pass a default quizID for testing
-      ),
-      routes: {
-        '/testResults': (context) => const TestResults(
-              selectedAnswers: [],
-              questions: [],
-            ),
-      },
-    );
-  }
-}
+import 'package:quizapp/services/flutter_secure_storage.dart';
 
 class Test extends StatefulWidget {
   final int quizID;
+
   const Test({Key? key, required this.quizID}) : super(key: key);
 
   @override
@@ -40,13 +17,12 @@ class Test extends StatefulWidget {
 class _TestState extends State<Test> {
   List<Map<String, dynamic>> questions = [];
   int currentQuestionIndex = 0;
-  List<int?> selectedAnswers = [];
+  List<List<bool>> selectedAnswers = [];
   late int _timeRemaining;
   Timer? _timer;
   bool isLoading = true;
 
-  final SecureStorageService _secureStorage =
-      SecureStorageService(); // Initialize secure storage
+  final SecureStorageService _secureStorage = SecureStorageService();
 
   @override
   void initState() {
@@ -62,7 +38,6 @@ class _TestState extends State<Test> {
         throw Exception("Token not found. Please log in again.");
       }
 
-      // Step 1: Fetch all Quiz-Question pairs
       final quizQuestionResponse = await http.get(
         Uri.parse('https://mercantec-quiz.onrender.com/api/Quiz_Question'),
         headers: <String, String>{
@@ -72,18 +47,15 @@ class _TestState extends State<Test> {
       );
 
       if (quizQuestionResponse.statusCode != 200) {
-        _showErrorDialog(
-            'Failed to fetch quiz-question pairs: ${quizQuestionResponse.statusCode}');
+        _showErrorDialog('Failed to fetch quiz-question pairs');
         return;
       }
 
-      // Parse and filter quiz-question pairs by selected quizID to get questionIDs
       final List<dynamic> quizQuestionPairs =
           jsonDecode(quizQuestionResponse.body);
       final List<int> questionIDs = quizQuestionPairs
           .where((pair) => pair['quizID'] == widget.quizID)
-          .map<int>((pair) => int.parse(
-              pair['questionID'].toString())) // Ensure questionID is an int
+          .map<int>((pair) => int.parse(pair['questionID'].toString()))
           .toList();
 
       if (questionIDs.isEmpty) {
@@ -91,7 +63,6 @@ class _TestState extends State<Test> {
         return;
       }
 
-      // Step 2: Fetch all questions from /api/Questions in one batch
       final questionResponse = await http.get(
         Uri.parse('https://mercantec-quiz.onrender.com/api/Questions'),
         headers: <String, String>{
@@ -101,35 +72,25 @@ class _TestState extends State<Test> {
       );
 
       if (questionResponse.statusCode != 200) {
-        _showErrorDialog(
-            'Failed to fetch questions: ${questionResponse.statusCode}');
+        _showErrorDialog('Failed to fetch questions');
         return;
       }
 
-      // Parse all questions and filter only those with matching questionIDs
       final List<dynamic> allQuestions = jsonDecode(questionResponse.body);
       List<Map<String, dynamic>> fetchedQuestions = [];
 
       for (var questionData in allQuestions) {
-        // Check if this question's ID is in the list of relevant questionIDs
         if (questionIDs.contains(int.parse(questionData['id'].toString()))) {
-          // Print question data for debugging
-          print('Fetched question data: $questionData');
-
-          // Parse the correct answer index safely
           int correctAnswerIndex = -1;
-          if (questionData['correctAnswer'] is List) {
-            if (questionData['correctAnswer'].isNotEmpty) {
-              correctAnswerIndex =
-                  int.tryParse(questionData['correctAnswer'][0].toString()) ??
-                      -1;
-            }
+          if (questionData['correctAnswer'] is List &&
+              questionData['correctAnswer'].isNotEmpty) {
+            correctAnswerIndex =
+                int.tryParse(questionData['correctAnswer'][0].toString()) ?? -1;
           } else if (questionData['correctAnswer'] is String) {
             correctAnswerIndex =
                 int.tryParse(questionData['correctAnswer']) ?? -1;
           }
 
-          // Add parsed question data to the list
           fetchedQuestions.add({
             'question': questionData['title'] ?? 'No question text available',
             'answers': List<String>.from(questionData['possibleAnswers'] ?? []),
@@ -139,10 +100,11 @@ class _TestState extends State<Test> {
         }
       }
 
-      // Step 3: Update the state with fetched questions
       setState(() {
         questions = fetchedQuestions;
-        selectedAnswers = List<int?>.filled(questions.length, null);
+        selectedAnswers = questions
+            .map((q) => List<bool>.filled(q['answers'].length, false))
+            .toList();
         isLoading = false;
         _startTimer();
       });
@@ -170,10 +132,6 @@ class _TestState extends State<Test> {
   void _nextQuestion() {
     setState(() {
       if (currentQuestionIndex < questions.length - 1) {
-        if (selectedAnswers[currentQuestionIndex] == null) {
-          selectedAnswers[currentQuestionIndex] = -1;
-        }
-
         currentQuestionIndex++;
         _startTimer();
       } else {
@@ -184,12 +142,14 @@ class _TestState extends State<Test> {
 
   void _selectAnswer(int index) {
     setState(() {
-      selectedAnswers[currentQuestionIndex] = index;
+      selectedAnswers[currentQuestionIndex][index] =
+          !selectedAnswers[currentQuestionIndex][index];
     });
   }
 
-  void _submitQuiz() {
+  void _submitQuiz() async {
     _timer?.cancel();
+    await _submitQuizResults();
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -199,6 +159,64 @@ class _TestState extends State<Test> {
         ),
       ),
     );
+  }
+
+  Future<void> _submitQuizResults() async {
+    const String url = 'https://mercantec-quiz.onrender.com/api/User_Quiz';
+    final quizEndDate = DateTime.now().toUtc().toIso8601String();
+    final completed = true;
+    final results = calculateResults();
+    final quizID = widget.quizID;
+    final userIDString = await _secureStorage.readUserID();
+    final userID = int.tryParse(userIDString ?? '0') ?? 0;
+    final timeUsed = calculateTimeUsed();
+
+    final Map<String, dynamic> payload = {
+      "quizEndDate": quizEndDate,
+      "completed": completed,
+      "results": results,
+      "quizID": quizID,
+      "userID": userID,
+      "timeUsed": timeUsed,
+    };
+
+    try {
+      final token = await _secureStorage.readToken();
+      if (token == null) {
+        throw Exception("Token not found. Please log in again.");
+      }
+
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode(payload),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('Quiz results submitted successfully');
+      } else {
+        print('Failed to submit quiz results');
+      }
+    } catch (e) {
+      print('Error submitting quiz results: $e');
+    }
+  }
+
+  int calculateResults() {
+    int score = 0;
+    for (int i = 0; i < questions.length; i++) {
+      if (selectedAnswers[i].contains(true)) {
+        score++;
+      }
+    }
+    return score;
+  }
+
+  int calculateTimeUsed() {
+    return 0; // Placeholder
   }
 
   void _showErrorDialog(String message) {
@@ -272,10 +290,10 @@ class _TestState extends State<Test> {
                       _selectAnswer(index);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          selectedAnswers[currentQuestionIndex] == index
-                              ? Colors.yellow
-                              : null,
+                      backgroundColor: selectedAnswers[currentQuestionIndex]
+                              [index]
+                          ? Colors.yellow
+                          : null,
                     ),
                     child: Text(answer),
                   ),

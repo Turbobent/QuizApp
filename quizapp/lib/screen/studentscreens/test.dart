@@ -81,15 +81,15 @@ class _TestState extends State<Test> {
 
       for (var questionData in allQuestions) {
         if (questionIDs.contains(int.parse(questionData['id'].toString()))) {
-          // Parse correct answers as a list of indices
+          // Parse correct answers as a list of indices and adjust to 0-based indexing
           List<int> correctAnswerIndices = [];
           if (questionData['correctAnswer'] is List &&
               questionData['correctAnswer'].isNotEmpty) {
             correctAnswerIndices = List<int>.from(
-                questionData['correctAnswer'].map((e) => e as int));
+                questionData['correctAnswer'].map((e) => e - 1)); // Adjust here
           } else if (questionData['correctAnswer'] is String) {
             correctAnswerIndices
-                .add(int.tryParse(questionData['correctAnswer']) ?? -1);
+                .add((int.tryParse(questionData['correctAnswer']) ?? 1) - 1);
           }
 
           fetchedQuestions.add({
@@ -101,7 +101,7 @@ class _TestState extends State<Test> {
 
           // Debugging: Print the question and correct answers
           print("Question: ${questionData['title']}");
-          print("Correct Answers: $correctAnswerIndices");
+          print("Correct Answers (adjusted): $correctAnswerIndices");
         }
       }
 
@@ -154,7 +154,28 @@ class _TestState extends State<Test> {
 
   void _submitQuiz() async {
     _timer?.cancel();
+
+    // Debugging: Print selected and correct answers
+    for (int i = 0; i < questions.length; i++) {
+      final question = questions[i];
+      final selectedForQuestion = selectedAnswers[i];
+      final correctAnswers = question['correctAnswerIndices'];
+
+      // Get selected indices
+      List<int> selectedIndices = [];
+      for (int j = 0; j < selectedForQuestion.length; j++) {
+        if (selectedForQuestion[j]) {
+          selectedIndices.add(j);
+        }
+      }
+
+      print("Question ${i + 1}: ${question['question']}");
+      print("Selected Answers: $selectedIndices");
+      print("Correct Answers (adjusted): $correctAnswers");
+    }
+
     await _submitQuizResults();
+
     Navigator.push(
       context,
       MaterialPageRoute(

@@ -21,7 +21,6 @@ class StudentLogin extends StatelessWidget {
         body: const MyStatefulWidget(),
       ),
       routes: {
-        '/studentLogin': (context) => const StudentLogin(),
         '/main': (context) => const StudentLogin(),
         '/studentHome': (context) => const StudentHome(),
       },
@@ -116,14 +115,6 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
                 fontWeight: FontWeight.w500,
                 fontSize: 30,
               ),
-            ),
-          ),
-          Container(
-            alignment: Alignment.center,
-            padding: const EdgeInsets.all(10),
-            child: const Text(
-              'Student Login',
-              style: TextStyle(fontSize: 20),
             ),
           ),
           Container(

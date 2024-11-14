@@ -81,22 +81,27 @@ class _TestState extends State<Test> {
 
       for (var questionData in allQuestions) {
         if (questionIDs.contains(int.parse(questionData['id'].toString()))) {
-          int correctAnswerIndex = -1;
+          // Parse correct answers as a list of indices
+          List<int> correctAnswerIndices = [];
           if (questionData['correctAnswer'] is List &&
               questionData['correctAnswer'].isNotEmpty) {
-            correctAnswerIndex =
-                int.tryParse(questionData['correctAnswer'][0].toString()) ?? -1;
+            correctAnswerIndices = List<int>.from(
+                questionData['correctAnswer'].map((e) => e as int));
           } else if (questionData['correctAnswer'] is String) {
-            correctAnswerIndex =
-                int.tryParse(questionData['correctAnswer']) ?? -1;
+            correctAnswerIndices
+                .add(int.tryParse(questionData['correctAnswer']) ?? -1);
           }
 
           fetchedQuestions.add({
             'question': questionData['title'] ?? 'No question text available',
             'answers': List<String>.from(questionData['possibleAnswers'] ?? []),
-            'correctAnswerIndex': correctAnswerIndex,
+            'correctAnswerIndices': correctAnswerIndices,
             'timer': questionData['time'] ?? 30,
           });
+
+          // Debugging: Print the question and correct answers
+          print("Question: ${questionData['title']}");
+          print("Correct Answers: $correctAnswerIndices");
         }
       }
 
@@ -179,6 +184,39 @@ class _TestState extends State<Test> {
       "userID": userID,
       "timeUsed": timeUsed,
     };
+
+    _timer?.cancel();
+
+    // Debugging: Print selected and correct answers
+    for (int i = 0; i < questions.length; i++) {
+      final question = questions[i];
+      final selectedForQuestion = selectedAnswers[i];
+      final correctAnswers = question['correctAnswerIndices'];
+
+      // Get selected indices
+      List<int> selectedIndices = [];
+      for (int j = 0; j < selectedForQuestion.length; j++) {
+        if (selectedForQuestion[j]) {
+          selectedIndices.add(j);
+        }
+      }
+
+      print("Question ${i + 1}: ${question['question']}");
+      print("Selected Answers: $selectedIndices");
+      print("Correct Answers: $correctAnswers");
+    }
+
+    await _submitQuizResults();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TestResults(
+          selectedAnswers: selectedAnswers,
+          questions: questions,
+        ),
+      ),
+    );
 
     try {
       final token = await _secureStorage.readToken();

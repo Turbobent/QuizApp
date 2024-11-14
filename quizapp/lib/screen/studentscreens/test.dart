@@ -1,3 +1,5 @@
+// lib/screen/studentscreens/test.dart
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -15,12 +17,11 @@ class Test extends StatefulWidget {
 }
 
 class _TestState extends State<Test> {
-  List<Map<String, dynamic>> questions = [];
-  int currentQuestionIndex = 0;
-  List<List<bool>> selectedAnswers = [];
-  late int _timeRemaining;
-  Timer? _timer;
-  bool isLoading = true;
+  List<Map<String, dynamic>> questions = []; // List of quiz questions
+  int currentQuestionIndex = 0; // Current question index
+  List<List<bool>> selectedAnswers = []; // User's selected answers
+  bool isLoading = true; // Indicates if questions are loading
+  bool isSubmitting = false; // Prevents multiple submissions
 
   final SecureStorageService _secureStorage = SecureStorageService();
 
@@ -30,6 +31,7 @@ class _TestState extends State<Test> {
     _fetchQuestions();
   }
 
+  // Fetch questions from the API
   Future<void> _fetchQuestions() async {
     try {
       final token = await _secureStorage.readToken();
@@ -38,6 +40,7 @@ class _TestState extends State<Test> {
         throw Exception("Token not found. Please log in again.");
       }
 
+      // Fetch quiz-question pairs
       final quizQuestionResponse = await http.get(
         Uri.parse('https://mercantec-quiz.onrender.com/api/Quiz_Question'),
         headers: <String, String>{
@@ -63,6 +66,7 @@ class _TestState extends State<Test> {
         return;
       }
 
+      // Fetch all questions
       final questionResponse = await http.get(
         Uri.parse('https://mercantec-quiz.onrender.com/api/Questions'),
         headers: <String, String>{
@@ -81,12 +85,12 @@ class _TestState extends State<Test> {
 
       for (var questionData in allQuestions) {
         if (questionIDs.contains(int.parse(questionData['id'].toString()))) {
-          // Parse correct answers as a list of indices and adjust to 0-based indexing
+          // Parse correct answers as a list of indices (0-based)
           List<int> correctAnswerIndices = [];
           if (questionData['correctAnswer'] is List &&
               questionData['correctAnswer'].isNotEmpty) {
-            correctAnswerIndices = List<int>.from(
-                questionData['correctAnswer'].map((e) => e - 1)); // Adjust here
+            correctAnswerIndices = List<int>.from(questionData['correctAnswer']
+                .map((e) => e - 1)); // Adjust to 0-based
           } else if (questionData['correctAnswer'] is String) {
             correctAnswerIndices
                 .add((int.tryParse(questionData['correctAnswer']) ?? 1) - 1);
@@ -98,10 +102,6 @@ class _TestState extends State<Test> {
             'correctAnswerIndices': correctAnswerIndices,
             'timer': questionData['time'] ?? 30,
           });
-
-          // Debugging: Print the question and correct answers
-          print("Question: ${questionData['title']}");
-          print("Correct Answers (adjusted): $correctAnswerIndices");
         }
       }
 
@@ -111,40 +111,13 @@ class _TestState extends State<Test> {
             .map((q) => List<bool>.filled(q['answers'].length, false))
             .toList();
         isLoading = false;
-        _startTimer();
       });
     } catch (e) {
       _showErrorDialog('An error occurred: $e');
     }
   }
 
-  void _startTimer() {
-    if (questions.isNotEmpty) {
-      _timeRemaining = questions[currentQuestionIndex]['timer'];
-      _timer?.cancel();
-      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (_timeRemaining > 0) {
-          setState(() {
-            _timeRemaining--;
-          });
-        } else {
-          _nextQuestion();
-        }
-      });
-    }
-  }
-
-  void _nextQuestion() {
-    setState(() {
-      if (currentQuestionIndex < questions.length - 1) {
-        currentQuestionIndex++;
-        _startTimer();
-      } else {
-        _submitQuiz();
-      }
-    });
-  }
-
+  // Toggle the selection state of an answer
   void _selectAnswer(int index) {
     setState(() {
       selectedAnswers[currentQuestionIndex][index] =
@@ -152,31 +125,37 @@ class _TestState extends State<Test> {
     });
   }
 
+  // Navigate to the next question or submit the quiz
+  void _nextQuestion() {
+    if (currentQuestionIndex < questions.length - 1) {
+      setState(() {
+        currentQuestionIndex++;
+      });
+    } else {
+      _submitQuiz();
+    }
+  }
+
+  // Submit the quiz
   void _submitQuiz() async {
-    _timer?.cancel();
+    if (isSubmitting) return; // Prevent multiple submissions
 
-    // Debugging: Print selected and correct answers
-    for (int i = 0; i < questions.length; i++) {
-      final question = questions[i];
-      final selectedForQuestion = selectedAnswers[i];
-      final correctAnswers = question['correctAnswerIndices'];
+    setState(() {
+      isSubmitting = true;
+    });
 
-      // Get selected indices
-      List<int> selectedIndices = [];
-      for (int j = 0; j < selectedForQuestion.length; j++) {
-        if (selectedForQuestion[j]) {
-          selectedIndices.add(j);
-        }
-      }
+    // Calculate the score (integer-based)
+    int score = _calculateScore();
 
-      print("Question ${i + 1}: ${question['question']}");
-      print("Selected Answers: $selectedIndices");
-      print("Correct Answers (adjusted): $correctAnswers");
-    }
+    // Submit results to the server (implement as needed)
+    // ...
 
-    await _submitQuizResults();
+    setState(() {
+      isSubmitting = false;
+    });
 
-    Navigator.push(
+    // Navigate to TestResults screen with passed data
+    Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => TestResults(
@@ -187,97 +166,48 @@ class _TestState extends State<Test> {
     );
   }
 
-  Future<void> _submitQuizResults() async {
-    const String url = 'https://mercantec-quiz.onrender.com/api/User_Quiz';
-    final quizEndDate = DateTime.now().toUtc().toIso8601String();
-    final completed = true;
-    final results = calculateResults();
-    final quizID = widget.quizID;
-    final userIDString = await _secureStorage.readUserID();
-    final userID = int.tryParse(userIDString ?? '0') ?? 0;
-    final timeUsed = calculateTimeUsed();
-
-    final Map<String, dynamic> payload = {
-      "quizEndDate": quizEndDate,
-      "completed": completed,
-      "results": results,
-      "quizID": quizID,
-      "userID": userID,
-      "timeUsed": timeUsed,
-    };
-
-    _timer?.cancel();
-
-    // Debugging: Print selected and correct answers
-    for (int i = 0; i < questions.length; i++) {
-      final question = questions[i];
-      final selectedForQuestion = selectedAnswers[i];
-      final correctAnswers = question['correctAnswerIndices'];
-
-      // Get selected indices
-      List<int> selectedIndices = [];
-      for (int j = 0; j < selectedForQuestion.length; j++) {
-        if (selectedForQuestion[j]) {
-          selectedIndices.add(j);
-        }
-      }
-
-      print("Question ${i + 1}: ${question['question']}");
-      print("Selected Answers: $selectedIndices");
-      print("Correct Answers: $correctAnswers");
-    }
-
-    await _submitQuizResults();
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TestResults(
-          selectedAnswers: selectedAnswers,
-          questions: questions,
-        ),
-      ),
-    );
-
-    try {
-      final token = await _secureStorage.readToken();
-      if (token == null) {
-        throw Exception("Token not found. Please log in again.");
-      }
-
-      final response = await http.put(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode(payload),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        print('Quiz results submitted successfully');
-      } else {
-        print('Failed to submit quiz results');
-      }
-    } catch (e) {
-      print('Error submitting quiz results: $e');
-    }
-  }
-
-  int calculateResults() {
+  /// Calculates the user's score based on correct answers.
+  int _calculateScore() {
     int score = 0;
+
     for (int i = 0; i < questions.length; i++) {
-      if (selectedAnswers[i].contains(true)) {
+      List<bool> selectedForQuestion = selectedAnswers[i];
+      List<int> correctAnswerIndices =
+          List<int>.from(questions[i]['correctAnswerIndices'] ?? []);
+
+      // Get indices of selected answers
+      List<int> selectedIndices = [];
+      for (int j = 0; j < selectedForQuestion.length; j++) {
+        if (selectedForQuestion[j]) {
+          selectedIndices.add(j);
+        }
+      }
+
+      // Debugging output
+      print('Question ${i + 1}:');
+      print('Selected Indices: $selectedIndices');
+      print('Correct Indices: $correctAnswerIndices');
+
+      // Check if selected indices match the correct answer indices
+      if (_listsMatch(selectedIndices, correctAnswerIndices)) {
         score++;
       }
     }
+
+    print('Total Score: $score/${questions.length}');
     return score;
   }
 
-  int calculateTimeUsed() {
-    return 0; // Placeholder
+  /// Helper method to check if two lists contain the same elements, regardless of order.
+  bool _listsMatch(List<int> list1, List<int> list2) {
+    if (list1.length != list2.length) return false;
+    for (int element in list1) {
+      if (!list2.contains(element)) return false;
+    }
+    return true;
   }
 
+  /// Show an error dialog
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -301,11 +231,15 @@ class _TestState extends State<Test> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (questions.isEmpty) {
-      return const Center(child: Text('No questions available.'));
+      return const Scaffold(
+        body: Center(child: Text('No questions available.')),
+      );
     }
 
     final currentQuestion = questions[currentQuestionIndex]['question'];
@@ -315,18 +249,6 @@ class _TestState extends State<Test> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Question ${currentQuestionIndex + 1}'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Center(
-              child: Text(
-                'Time: $_timeRemaining',
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(10.0),
@@ -338,34 +260,31 @@ class _TestState extends State<Test> {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            Column(
-              children: currentAnswers.asMap().entries.map((entry) {
-                int index = entry.key;
-                String answer = entry.value;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5.0),
-                  child: ElevatedButton(
-                    onPressed: () {
+            Expanded(
+              child: ListView(
+                children: currentAnswers.asMap().entries.map((entry) {
+                  int index = entry.key;
+                  String answer = entry.value;
+                  return CheckboxListTile(
+                    title: Text(answer),
+                    value: selectedAnswers[currentQuestionIndex][index],
+                    onChanged: (bool? value) {
                       _selectAnswer(index);
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: selectedAnswers[currentQuestionIndex]
-                              [index]
-                          ? Colors.yellow
-                          : null,
-                    ),
-                    child: Text(answer),
-                  ),
-                );
-              }).toList(),
+                    activeColor: Colors.yellow,
+                  );
+                }).toList(),
+              ),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _nextQuestion,
-              child: Text(currentQuestionIndex < questions.length - 1
-                  ? 'Next'
-                  : 'Submit'),
-            ),
+            isSubmitting
+                ? const Center(child: CircularProgressIndicator())
+                : ElevatedButton(
+                    onPressed: _nextQuestion,
+                    child: Text(currentQuestionIndex < questions.length - 1
+                        ? 'Next'
+                        : 'Submit'),
+                  ),
           ],
         ),
       ),

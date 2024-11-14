@@ -1,3 +1,5 @@
+// lib/screen/studentscreens/studentHome.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -5,8 +7,10 @@ import 'package:quizapp/screen/studentscreens/test.dart';
 import 'package:quizapp/screen/studentscreens/takenTests.dart';
 import 'package:quizapp/services/flutter_secure_storage.dart';
 
+/// Entry point of the application.
 void main() => runApp(const MyApp());
 
+/// Root widget of the application.
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -23,6 +27,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+/// Stateful widget representing the Student Home screen.
 class StudentHome extends StatefulWidget {
   const StudentHome({super.key});
 
@@ -34,15 +39,30 @@ class _StudentHomeState extends State<StudentHome> {
   List<Map<String, dynamic>> lockedQuiz = [];
   final SecureStorageService _secureStorage = SecureStorageService();
 
+  bool isLoading = true; // Tracks if data is being fetched
+  String? errorMessage; // Holds error messages, if any
+
+  /// Fetches quizzes from the API.
   Future<void> fetchQuizzes() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null; // Reset error message before fetching
+    });
+
     try {
       final token = await _secureStorage.readToken();
       if (token == null) {
         throw Exception("Token not found. Please log in again.");
       }
 
+      final userid = await _secureStorage.readUserID();
+      if (userid == null) {
+        throw Exception("User ID not found. Please log in again.");
+      }
+
       final response = await http.get(
-        Uri.parse('https://mercantec-quiz.onrender.com/api/quizs'),
+        Uri.parse(
+            'https://mercantec-quiz.onrender.com/api/User_Quiz/AllUserQuiz/$userid'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Authorization': 'Bearer $token',
@@ -51,20 +71,35 @@ class _StudentHomeState extends State<StudentHome> {
 
       if (response.statusCode == 200) {
         var jsonResponse = jsonDecode(response.body);
-        List<Map<String, dynamic>> quizzes = List<Map<String, dynamic>>.from(
-          jsonResponse.map((quiz) => {
-                'id': quiz['id'],
-                'title': quiz['title'],
-              }),
-        );
 
-        setState(() {
-          lockedQuiz = quizzes;
-        });
+        // Ensure the response is a list
+        if (jsonResponse is List) {
+          // Filter quizzes where 'completed' is false
+          List<Map<String, dynamic>> filteredQuizzes =
+              List<Map<String, dynamic>>.from(
+            jsonResponse
+                .where((quiz) => quiz['completed'] == false)
+                .map((quiz) => {
+                      'id': quiz['quiz']['id'],
+                      'title': quiz['quiz']['title'],
+                    }),
+          );
+
+          setState(() {
+            lockedQuiz = filteredQuizzes;
+            isLoading = false;
+          });
+        } else {
+          throw Exception("Unexpected response format.");
+        }
       } else {
-        print('Failed to fetch quizzes: ${response.statusCode}');
+        throw Exception('Failed to fetch quizzes: ${response.statusCode}');
       }
     } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
       print('An error occurred: $e');
     }
   }
@@ -72,7 +107,7 @@ class _StudentHomeState extends State<StudentHome> {
   @override
   void initState() {
     super.initState();
-    fetchQuizzes();
+    fetchQuizzes(); // Fetch quizzes when the widget initializes
   }
 
   @override
@@ -86,6 +121,7 @@ class _StudentHomeState extends State<StudentHome> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            // "Taken Quiz" Button
             InkWell(
               onTap: () {
                 Navigator.of(context).push(
@@ -114,31 +150,57 @@ class _StudentHomeState extends State<StudentHome> {
               ),
             ),
             const SizedBox(height: 10),
+
+            // "Quizzes" Heading
             const Text(
               'Quizzes',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
             const SizedBox(height: 20),
+
+            // Expanded section for quizzes list or loading indicator/error message
             Expanded(
-              child: ListView.builder(
-                itemCount: lockedQuiz.length,
-                itemBuilder: (BuildContext context, int index) {
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: ListTile(
-                      title: Text(lockedQuiz[index]['title']),
-                      onTap: () {
-                        final quizID = lockedQuiz[index]['id'];
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => Test(quizID: quizID),
+              child: isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(), // Loading indicator
+                    )
+                  : errorMessage != null
+                      ? Center(
+                          child: Text(
+                            errorMessage!,
+                            style: const TextStyle(
+                                color: Colors.red, fontSize: 16),
+                            textAlign: TextAlign.center,
                           ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
+                        )
+                      : lockedQuiz.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No quizzes available.',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: lockedQuiz.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                return Card(
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 8.0),
+                                  child: ListTile(
+                                    title: Text(lockedQuiz[index]['title']),
+                                    onTap: () {
+                                      final quizID = lockedQuiz[index]['id'];
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              Test(quizID: quizID),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
             ),
           ],
         ),

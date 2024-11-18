@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:quizapp/screen/studentscreens/testResults.dart';
-import 'package:quizapp/services/flutter_secure_storage.dart';
+import 'package:quizapp/services/flutter_secure_storage.dart'; // Corrected import
 
 class Test extends StatefulWidget {
   final int quizID;
@@ -22,23 +22,55 @@ class _TestState extends State<Test> {
   List<List<bool>> selectedAnswers = []; // User's selected answers
   bool isLoading = true; // Indicates if questions are loading
   bool isSubmitting = false; // Prevents multiple submissions
+  String? quizDifficulty; // Stores the quiz's difficulty level
 
   final SecureStorageService _secureStorage = SecureStorageService();
+
+  // Variables to track quiz timing
+  late DateTime _quizStartTime;
+  late DateTime _quizEndTime;
 
   @override
   void initState() {
     super.initState();
-    _fetchQuestions();
+    _quizStartTime = DateTime.now();
+    _fetchQuizDetailsAndQuestions();
   }
 
-  // Fetch questions from the API
-  Future<void> _fetchQuestions() async {
+  // Fetch quiz details and questions from the API
+  Future<void> _fetchQuizDetailsAndQuestions() async {
     try {
       final token = await _secureStorage.readToken();
+      final userID = await _secureStorage.readUserID();
 
       if (token == null) {
         throw Exception("Token not found. Please log in again.");
       }
+
+      if (userID == null) {
+        throw Exception("User ID not found. Please log in again.");
+      }
+
+      // Fetch quiz details (including difficulty)
+      final quizResponse = await http.get(
+        Uri.parse(
+            'https://mercantec-quiz.onrender.com/api/Quizs/${widget.quizID}'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (quizResponse.statusCode != 200) {
+        _showErrorDialog('Failed to fetch quiz details');
+        return;
+      }
+
+      final Map<String, dynamic> quizData = jsonDecode(quizResponse.body);
+
+      // Extract quiz difficulty
+      quizDifficulty =
+          quizData['difficulty'] ?? 'h1'; // Default to 'h1' if not provided
 
       // Fetch quiz-question pairs
       final quizQuestionResponse = await http.get(
@@ -101,6 +133,9 @@ class _TestState extends State<Test> {
             'answers': List<String>.from(questionData['possibleAnswers'] ?? []),
             'correctAnswerIndices': correctAnswerIndices,
             'timer': questionData['time'] ?? 30,
+            'difficulty': questionData['difficulty'] ??
+                'h1', // Ensure question difficulty is present
+            'id': questionData['id'], // Include question ID for submission
           });
         }
       }
@@ -137,30 +172,28 @@ class _TestState extends State<Test> {
   }
 
   // Submit the quiz
-  void _submitQuiz() async {
-    if (isSubmitting) return; // Prevent multiple submissions
+  void _submitQuiz() {
+    // Record the quiz end time
+    DateTime quizEndTime = DateTime.now();
 
-    setState(() {
-      isSubmitting = true;
-    });
+    // Calculate time used in seconds
+    int timeUsed = quizEndTime.difference(_quizStartTime).inSeconds;
 
     // Calculate the score (integer-based)
     int score = _calculateScore();
 
-    // Submit results to the server (implement as needed)
-    // ...
-
-    setState(() {
-      isSubmitting = false;
-    });
-
-    // Navigate to TestResults screen with passed data
+    // Navigate to TestResults screen without passing 'userID' and 'results'
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => TestResults(
           selectedAnswers: selectedAnswers,
           questions: questions,
+          quizDifficulty: quizDifficulty ?? 'h1', // Provide a default if null
+          quizEndDate: quizEndTime.toUtc().toIso8601String(),
+          completed: true,
+          quizID: widget.quizID,
+          timeUsed: timeUsed,
         ),
       ),
     );
@@ -220,6 +253,11 @@ class _TestState extends State<Test> {
               child: const Text("OK"),
               onPressed: () {
                 Navigator.of(context).pop();
+                if (message.contains("No questions found") ||
+                    message.contains("Token not found") ||
+                    message.contains("User ID not found")) {
+                  Navigator.of(context).pop(); // Exit the Test screen
+                }
               },
             ),
           ],
@@ -277,14 +315,12 @@ class _TestState extends State<Test> {
               ),
             ),
             const SizedBox(height: 20),
-            isSubmitting
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: _nextQuestion,
-                    child: Text(currentQuestionIndex < questions.length - 1
-                        ? 'Next'
-                        : 'Submit'),
-                  ),
+            ElevatedButton(
+              onPressed: _nextQuestion,
+              child: Text(currentQuestionIndex < questions.length - 1
+                  ? 'Next'
+                  : 'Submit'),
+            ),
           ],
         ),
       ),

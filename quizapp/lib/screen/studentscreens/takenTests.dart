@@ -117,7 +117,7 @@ class _TakenTestsState extends State<TakenTests> {
                       ),
                       subtitle: Text('Date Taken: ${test.dateTaken}'),
                       trailing: Text(
-                        'Score: ${test.score}/${test.totalQuestions}',
+                        'Score: ${test.score}',
                         style: TextStyle(
                           color: test.score >= test.totalQuestions / 2
                               ? Colors.green

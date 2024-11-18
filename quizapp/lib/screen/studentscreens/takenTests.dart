@@ -1,7 +1,10 @@
+// lib/screen/studentscreens/takenTests.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:quizapp/services/flutter_secure_storage.dart';
+import 'package:intl/intl.dart'; // Importeret intl for date formatting
 
 // Model class for a taken test
 class TakenTest {
@@ -25,6 +28,17 @@ class TakenTest {
       score: json['results'] ?? 0,
       totalQuestions: json['quiz']['qestionsAmount'] ?? 0,
     );
+  }
+
+  // Getter to return formatted date
+  String get formattedDate {
+    try {
+      DateTime parsedDate = DateTime.parse(dateTaken);
+      return DateFormat('dd-MM-yyyy').format(parsedDate);
+    } catch (e) {
+      // Hvis datoen ikke kan parses, returner den originale streng
+      return dateTaken;
+    }
   }
 }
 
@@ -104,32 +118,34 @@ class _TakenTestsState extends State<TakenTests> {
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(10.0),
-              child: ListView.builder(
-                itemCount: takenTests.length,
-                itemBuilder: (context, index) {
-                  final test = takenTests[index];
-                  return Card(
-                    child: ListTile(
-                      title: Text(
-                        test.testName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                      subtitle: Text('Date Taken: ${test.dateTaken}'),
-                      trailing: Text(
-                        'Score: ${test.score}',
-                        style: TextStyle(
-                          color: test.score >= test.totalQuestions / 2
-                              ? Colors.green
-                              : Colors.red,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
+              child: takenTests.isEmpty
+                  ? const Center(child: Text('Ingen gennemførte tests fundet.'))
+                  : ListView.builder(
+                      itemCount: takenTests.length,
+                      itemBuilder: (context, index) {
+                        final test = takenTests[index];
+                        return Card(
+                          child: ListTile(
+                            title: Text(
+                              test.testName,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 18),
+                            ),
+                            subtitle: Text('Date Taken: ${test.formattedDate}'),
+                            trailing: Text(
+                              'Score: ${test.score}',
+                              style: TextStyle(
+                                color: test.score >= (test.totalQuestions / 2)
+                                    ? Colors.green
+                                    : Colors.red,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
     );
   }

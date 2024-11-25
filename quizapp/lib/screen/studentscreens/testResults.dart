@@ -60,8 +60,9 @@ class _TestResultsState extends State<TestResults>
   // List to hold properties of each emoji
   late final List<Emoji> _emojis;
 
-  // Store the total points in a state variable to prevent recalculating on every build
+  // Store the total points and max points in state variables
   late int _totalPoints;
+  late int _maxPoints;
 
   bool _isSubmitting = true; // Indicates if the PUT request is in progress
   String? _submissionError; // Stores any submission errors
@@ -112,10 +113,10 @@ class _TestResultsState extends State<TestResults>
       _totalPoints = _calculateTotalPoints();
 
       // Calculate maximum possible points
-      int maxPoints = _calculateMaxPoints();
+      _maxPoints = _calculateMaxPoints();
 
       // Determine if the score is under the threshold (50%)
-      _isUnderThreshold = (_totalPoints / maxPoints) < 0.5;
+      _isUnderThreshold = (_totalPoints / _maxPoints) < 0.5;
 
       // Prepare the payload with the correct results
       Map<String, dynamic> payload = {
@@ -178,11 +179,12 @@ class _TestResultsState extends State<TestResults>
         _isSubmitting = false;
       });
 
-      // Calculate maximum possible points
-      int maxPoints = _calculateMaxPoints();
+      // Calculate maximum possible points (redundant if already done above)
+      // _maxPoints is already calculated before
 
-      // Determine if the score is under the threshold (50%)
-      _isUnderThreshold = (_totalPoints / maxPoints) < 0.5;
+      // Re-determine if the score is under the threshold (in case maxPoints was 0)
+      _isUnderThreshold =
+          _maxPoints > 0 ? (_totalPoints / _maxPoints) < 0.5 : false;
 
       if (_isUnderThreshold) {
         // Start the animation
@@ -327,7 +329,8 @@ class _TestResultsState extends State<TestResults>
       max += points;
     }
 
-    return max;
+    print('Maximum Points: $max');
+    return max > 0 ? max : 1; // Prevent division by zero
   }
 
   @override
@@ -395,9 +398,15 @@ class _TestResultsState extends State<TestResults>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Your Score: $_totalPoints',
+                              'Your Score: $_totalPoints / $_maxPoints',
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold, fontSize: 24),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Percentage: ${_calculatePercentage()}%',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.normal, fontSize: 18),
                             ),
                             const SizedBox(height: 20),
                             // Home Button
@@ -459,5 +468,18 @@ class _TestResultsState extends State<TestResults>
         ],
       ),
     );
+  }
+
+  /// Calculates the user's score as a percentage.
+  double _calculatePercentage() {
+    if (_maxPoints == 0) return 0.0;
+    return ((_totalPoints / _maxPoints) * 100).toDoubleAsFixed(2);
+  }
+}
+
+extension DoubleExtension on double {
+  /// Rounds a double to two decimal places.
+  double toDoubleAsFixed(int fractionDigits) {
+    return double.parse(toStringAsFixed(fractionDigits));
   }
 }

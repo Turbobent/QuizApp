@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:quizapp/screen/studentscreens/testResults.dart';
-import 'package:quizapp/services/flutter_secure_storage.dart'; // Korrekt import
+import 'package:quizapp/services/flutter_secure_storage.dart'; // Correct import
 
 class Test extends StatefulWidget {
   final int quizID;
@@ -17,22 +17,22 @@ class Test extends StatefulWidget {
 }
 
 class _TestState extends State<Test> {
-  List<Map<String, dynamic>> questions = []; // Liste af quizspørgsmål
-  int currentQuestionIndex = 0; // Nuværende spørgsmål indeks
-  List<List<bool>> selectedAnswers = []; // Brugerens valgte svar
-  bool isLoading = true; // Indikerer om spørgsmål indlæses
-  bool isSubmitting = false; // Forhindrer multiple indsendelser
-  String? quizDifficulty; // Gemmer quizsværhedsgraden
+  List<Map<String, dynamic>> questions = []; // List of quiz questions
+  int currentQuestionIndex = 0; // Current question index
+  List<List<bool>> selectedAnswers = []; // User's selected answers
+  bool isLoading = true; // Indicates if questions are loading
+  bool isSubmitting = false; // Prevents multiple submissions
+  String? quizDifficulty; // Stores quiz difficulty level
 
   final SecureStorageService _secureStorage = SecureStorageService();
 
-  // Variabler til at spore quiz tidsforbrug
+  // Variables to track quiz time usage
   late DateTime _quizStartTime;
   late DateTime _quizEndTime;
 
-  // Timer relaterede variabler
-  int _remainingTime = 0; // Resterende tid i sekunder
-  Timer? _timer; // Timer objekt
+  // Timer related variables
+  int _remainingTime = 0; // Remaining time in seconds
+  Timer? _timer; // Timer object
 
   @override
   void initState() {
@@ -41,7 +41,7 @@ class _TestState extends State<Test> {
     _fetchQuizDetailsAndQuestions();
   }
 
-  // Hent quiz detaljer og spørgsmål fra API'en
+  // Fetch quiz details and questions from the API
   Future<void> _fetchQuizDetailsAndQuestions() async {
     try {
       final token = await _secureStorage.readToken();
@@ -55,7 +55,7 @@ class _TestState extends State<Test> {
         throw Exception("User ID ikke fundet. Log venligst ind igen.");
       }
 
-      // Hent quiz detaljer (inklusive sværhedsgrad)
+      // Fetch quiz details (including difficulty)
       final quizResponse = await http.get(
         Uri.parse(
             'https://mercantec-quiz.onrender.com/api/Quizs/${widget.quizID}'),
@@ -72,11 +72,11 @@ class _TestState extends State<Test> {
 
       final Map<String, dynamic> quizData = jsonDecode(quizResponse.body);
 
-      // Uddrag quiz sværhedsgrad
+      // Extract quiz difficulty
       quizDifficulty =
-          quizData['difficulty'] ?? 'h1'; // Standard til 'h1' hvis ikke angivet
+          quizData['difficulty'] ?? 'h1'; // Default to 'h1' if not specified
 
-      // Hent quiz-spørgsmål par
+      // Fetch quiz-question pairs
       final quizQuestionResponse = await http.get(
         Uri.parse('https://mercantec-quiz.onrender.com/api/Quiz_Question'),
         headers: <String, String>{
@@ -102,7 +102,7 @@ class _TestState extends State<Test> {
         return;
       }
 
-      // Hent alle spørgsmål
+      // Fetch all questions
       final questionResponse = await http.get(
         Uri.parse('https://mercantec-quiz.onrender.com/api/Questions'),
         headers: <String, String>{
@@ -121,12 +121,12 @@ class _TestState extends State<Test> {
 
       for (var questionData in allQuestions) {
         if (questionIDs.contains(int.parse(questionData['id'].toString()))) {
-          // Pars korrekte svar som en liste af indekser (0-baseret)
+          // Parse correct answers as a list of indices (0-based)
           List<int> correctAnswerIndices = [];
           if (questionData['correctAnswer'] is List &&
               questionData['correctAnswer'].isNotEmpty) {
             correctAnswerIndices = List<int>.from(questionData['correctAnswer']
-                .map((e) => e - 1)); // Juster til 0-baseret
+                .map((e) => e - 1)); // Adjust to 0-based
           } else if (questionData['correctAnswer'] is String) {
             correctAnswerIndices
                 .add((int.tryParse(questionData['correctAnswer']) ?? 1) - 1);
@@ -139,8 +139,8 @@ class _TestState extends State<Test> {
             'correctAnswerIndices': correctAnswerIndices,
             'timer': questionData['time'] ?? 30,
             'difficulty': questionData['difficulty'] ??
-                'h1', // Sikre at spørgsmålssværhedsgrad er til stede
-            'id': questionData['id'], // Inkluder spørgsmål ID til indsendelse
+                'h1', // Ensure question difficulty is present
+            'id': questionData['id'], // Include question ID for submission
           });
         }
       }
@@ -153,26 +153,26 @@ class _TestState extends State<Test> {
         isLoading = false;
       });
 
-      // Start timeren for det første spørgsmål
+      // Start timer for the first question
       _startTimer();
     } catch (e) {
       _showErrorDialog('Der opstod en fejl: $e');
     }
   }
 
-  // Start timeren for det aktuelle spørgsmål
+  // Start the timer for the current question
   void _startTimer() {
-    // Hent den aktuelle spørgsmåls timer
+    // Get the timer value for the current question
     int questionTimer = questions[currentQuestionIndex]['timer'] ?? 30;
 
     setState(() {
       _remainingTime = questionTimer;
     });
 
-    // Annuller eventuel eksisterende timer
+    // Cancel any existing timer
     _timer?.cancel();
 
-    // Start en ny timer
+    // Start a new timer
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingTime > 0) {
         setState(() {
@@ -185,10 +185,10 @@ class _TestState extends State<Test> {
     });
   }
 
-  // Håndter hvad der sker, når tiden er op
+  // Handle what happens when time is up
   void _onTimeUp() {
-    // Du kan vælge at automatisk gå til næste spørgsmål eller indsende quizzen
-    // Her vælger vi at gå til næste spørgsmål
+    // You can choose to automatically go to the next question or submit the quiz
+    // Here, we choose to go to the next question
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Tiden er op!')),
     );
@@ -206,7 +206,7 @@ class _TestState extends State<Test> {
 
   // Navigate to the next question or submit the quiz
   void _nextQuestion() {
-    // Annuller timeren for det nuværende spørgsmål
+    // Cancel the timer for the current question
     _timer?.cancel();
 
     if (currentQuestionIndex < questions.length - 1) {
@@ -214,7 +214,7 @@ class _TestState extends State<Test> {
         currentQuestionIndex++;
       });
 
-      // Start timeren for det næste spørgsmål
+      // Start timer for the next question
       _startTimer();
     } else {
       _submitQuiz();
@@ -232,7 +232,7 @@ class _TestState extends State<Test> {
     // Calculate the score (integer-based)
     int score = _calculateScore();
 
-    // Annuller timeren, hvis den stadig kører
+    // Cancel the timer if it's still running
     _timer?.cancel();
 
     // Navigate to TestResults screen without passing 'userID' and 'results'
@@ -242,7 +242,7 @@ class _TestState extends State<Test> {
         builder: (context) => TestResults(
           selectedAnswers: selectedAnswers,
           questions: questions,
-          quizDifficulty: quizDifficulty ?? 'h1', // Giv en standard hvis null
+          quizDifficulty: quizDifficulty ?? 'h1', // Provide a default if null
           quizEndDate: quizEndTime.toUtc().toIso8601String(),
           completed: true,
           quizID: widget.quizID,
@@ -309,7 +309,7 @@ class _TestState extends State<Test> {
                 if (message.contains("Ingen spørgsmål fundet") ||
                     message.contains("Token ikke fundet") ||
                     message.contains("User ID ikke fundet")) {
-                  Navigator.of(context).pop(); // Forlad Test skærmen
+                  Navigator.of(context).pop(); // Exit the Test screen
                 }
               },
             ),
@@ -321,7 +321,7 @@ class _TestState extends State<Test> {
 
   @override
   void dispose() {
-    // Afslut timeren, når widget bliver fjernet
+    // Cancel the timer when the widget is removed
     _timer?.cancel();
     super.dispose();
   }
@@ -352,7 +352,8 @@ class _TestState extends State<Test> {
       body: Padding(
         padding: const EdgeInsets.all(10.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment
+              .stretch, // Ensures children stretch horizontally
           children: <Widget>[
             // Timer display
             Row(
@@ -370,12 +371,14 @@ class _TestState extends State<Test> {
               ],
             ),
             const SizedBox(height: 10),
+
             // Spørgsmålstekst
             Text(
               currentQuestion,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
+
             // Liste af svarmuligheder
             Expanded(
               child: ListView(
@@ -394,12 +397,22 @@ class _TestState extends State<Test> {
               ),
             ),
             const SizedBox(height: 20),
+
             // Næste/Indsend knap
             ElevatedButton(
               onPressed: _nextQuestion,
-              child: Text(currentQuestionIndex < questions.length - 1
-                  ? 'Næste'
-                  : 'Indsend'),
+              style: ElevatedButton.styleFrom(
+                minimumSize:
+                    const Size(double.infinity, 50), // Full width, 50 height
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                textStyle:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              child: Text(
+                currentQuestionIndex < questions.length - 1
+                    ? 'Næste'
+                    : 'Indsend',
+              ),
             ),
           ],
         ),

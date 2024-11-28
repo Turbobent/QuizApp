@@ -246,37 +246,37 @@ class _TestResultsState extends State<TestResults>
             ),
           ),
           // Falling emojis
-          if (_isUnderThreshold)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) {
-                    return Stack(
-                      children: _emojis.map((emoji) {
-                        double topPosition =
-                            _calculateTopPosition(emoji, screenHeight);
+          // if (_isUnderThreshold)
+          //   Positioned.fill(
+          //     child: IgnorePointer(
+          //       child: AnimatedBuilder(
+          //         animation: _controller,
+          //         builder: (context, child) {
+          //           return Stack(
+          //             children: _emojis.map((emoji) {
+          //               double topPosition =
+          //                   _calculateTopPosition(emoji, screenHeight);
 
-                        // If the emoji has moved beyond the screen, reset its delay
-                        if (topPosition > screenHeight) {
-                          emoji.initialDelay = _random.nextDouble();
-                          topPosition = 0;
-                        }
+          //               // If the emoji has moved beyond the screen, reset its delay
+          //               if (topPosition > screenHeight) {
+          //                 emoji.initialDelay = _random.nextDouble();
+          //                 topPosition = 0;
+          //               }
 
-                        return Positioned(
-                          left: emoji.horizontalPosition * screenWidth,
-                          top: topPosition,
-                          child: const Text(
-                            '😭',
-                            style: TextStyle(fontSize: 30),
-                          ),
-                        );
-                      }).toList(),
-                    );
-                  },
-                ),
-              ),
-            ),
+          //               return Positioned(
+          //                 left: emoji.horizontalPosition * screenWidth,
+          //                 top: topPosition,
+          //                 child: const Text(
+          //                   '😭',
+          //                   style: TextStyle(fontSize: 30),
+          //                 ),
+          //               );
+          //             }).toList(),
+          //           );
+          //         },
+          //       ),
+          //     ),
+          //   ),
         ],
       ),
     );

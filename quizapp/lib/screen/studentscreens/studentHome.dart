@@ -74,11 +74,15 @@ class _StudentHomeState extends State<StudentHome> {
 
         // Ensure the response is a list
         if (jsonResponse is List) {
-          // Filter quizzes where 'completed' is false
+          DateTime now = DateTime.now();
+
+          // Filter quizzes where 'completed' is false and 'quizEndDate' is in the future
           List<Map<String, dynamic>> filteredQuizzes =
               List<Map<String, dynamic>>.from(
             jsonResponse
-                .where((quiz) => quiz['completed'] == false)
+                .where((quiz) =>
+                    quiz['completed'] == false &&
+                    DateTime.parse(quiz['quizEndDate']).isAfter(now))
                 .map((quiz) => {
                       'id': quiz['quiz']['id'],
                       'title': quiz['quiz']['title'],

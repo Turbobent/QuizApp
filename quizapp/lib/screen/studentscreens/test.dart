@@ -1,9 +1,11 @@
+// lib/screen/studentscreens/test.dart
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:quizapp/screen/studentscreens/testResults.dart';
-import 'package:quizapp/services/flutter_secure_storage.dart';
+import 'package:quizapp/services/flutter_secure_storage.dart'; // Correct import
 
 class Test extends StatefulWidget {
   final int quizID;
@@ -15,29 +17,66 @@ class Test extends StatefulWidget {
 }
 
 class _TestState extends State<Test> {
-  List<Map<String, dynamic>> questions = [];
-  int currentQuestionIndex = 0;
-  List<List<bool>> selectedAnswers = [];
-  late int _timeRemaining;
-  Timer? _timer;
-  bool isLoading = true;
+  List<Map<String, dynamic>> questions = []; // List of quiz questions
+  int currentQuestionIndex = 0; // Current question index
+  List<List<bool>> selectedAnswers = []; // User's selected answers
+  bool isLoading = true; // Indicates if questions are loading
+  bool isSubmitting = false; // Prevents multiple submissions
+  String? quizDifficulty; // Stores quiz difficulty level
 
   final SecureStorageService _secureStorage = SecureStorageService();
+
+  // Variables to track quiz time usage
+  late DateTime _quizStartTime;
+  late DateTime _quizEndTime;
+
+  // Timer related variables
+  int _remainingTime = 0; // Remaining time in seconds
+  Timer? _timer; // Timer object
 
   @override
   void initState() {
     super.initState();
-    _fetchQuestions();
+    _quizStartTime = DateTime.now();
+    _fetchQuizDetailsAndQuestions();
   }
 
-  Future<void> _fetchQuestions() async {
+  // Fetch quiz details and questions from the API
+  Future<void> _fetchQuizDetailsAndQuestions() async {
     try {
       final token = await _secureStorage.readToken();
+      final userID = await _secureStorage.readUserID();
 
       if (token == null) {
-        throw Exception("Token not found. Please log in again.");
+        throw Exception("Token ikke fundet. Log venligst ind igen.");
       }
 
+      if (userID == null) {
+        throw Exception("User ID ikke fundet. Log venligst ind igen.");
+      }
+
+      // Fetch quiz details (including difficulty)
+      final quizResponse = await http.get(
+        Uri.parse(
+            'https://mercantec-quiz.onrender.com/api/Quizs/${widget.quizID}'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (quizResponse.statusCode != 200) {
+        _showErrorDialog('Kunne ikke hente quiz detaljer');
+        return;
+      }
+
+      final Map<String, dynamic> quizData = jsonDecode(quizResponse.body);
+
+      // Extract quiz difficulty
+      quizDifficulty =
+          quizData['difficulty'] ?? 'h1'; // Default to 'h1' if not specified
+
+      // Fetch quiz-question pairs
       final quizQuestionResponse = await http.get(
         Uri.parse('https://mercantec-quiz.onrender.com/api/Quiz_Question'),
         headers: <String, String>{
@@ -47,7 +86,7 @@ class _TestState extends State<Test> {
       );
 
       if (quizQuestionResponse.statusCode != 200) {
-        _showErrorDialog('Failed to fetch quiz-question pairs');
+        _showErrorDialog('Kunne ikke hente quiz-spørgsmål par');
         return;
       }
 
@@ -59,10 +98,11 @@ class _TestState extends State<Test> {
           .toList();
 
       if (questionIDs.isEmpty) {
-        _showErrorDialog("No questions found for the selected quiz.");
+        _showErrorDialog("Ingen spørgsmål fundet for den valgte quiz.");
         return;
       }
 
+      // Fetch all questions
       final questionResponse = await http.get(
         Uri.parse('https://mercantec-quiz.onrender.com/api/Questions'),
         headers: <String, String>{
@@ -72,7 +112,7 @@ class _TestState extends State<Test> {
       );
 
       if (questionResponse.statusCode != 200) {
-        _showErrorDialog('Failed to fetch questions');
+        _showErrorDialog('Kunne ikke hente spørgsmål');
         return;
       }
 
@@ -81,27 +121,27 @@ class _TestState extends State<Test> {
 
       for (var questionData in allQuestions) {
         if (questionIDs.contains(int.parse(questionData['id'].toString()))) {
-          // Parse correct answers as a list of indices and adjust to 0-based indexing
+          // Parse correct answers as a list of indices (0-based)
           List<int> correctAnswerIndices = [];
           if (questionData['correctAnswer'] is List &&
               questionData['correctAnswer'].isNotEmpty) {
-            correctAnswerIndices = List<int>.from(
-                questionData['correctAnswer'].map((e) => e - 1)); // Adjust here
+            correctAnswerIndices = List<int>.from(questionData['correctAnswer']
+                .map((e) => e - 1)); // Adjust to 0-based
           } else if (questionData['correctAnswer'] is String) {
             correctAnswerIndices
                 .add((int.tryParse(questionData['correctAnswer']) ?? 1) - 1);
           }
 
           fetchedQuestions.add({
-            'question': questionData['title'] ?? 'No question text available',
+            'question':
+                questionData['title'] ?? 'Ingen spørgsmålstekst tilgængelig',
             'answers': List<String>.from(questionData['possibleAnswers'] ?? []),
             'correctAnswerIndices': correctAnswerIndices,
             'timer': questionData['time'] ?? 30,
+            'difficulty': questionData['difficulty'] ??
+                'h1', // Ensure question difficulty is present
+            'id': questionData['id'], // Include question ID for submission
           });
-
-          // Debugging: Print the question and correct answers
-          print("Question: ${questionData['title']}");
-          print("Correct Answers (adjusted): $correctAnswerIndices");
         }
       }
 
@@ -111,40 +151,52 @@ class _TestState extends State<Test> {
             .map((q) => List<bool>.filled(q['answers'].length, false))
             .toList();
         isLoading = false;
-        _startTimer();
       });
+
+      // Start timer for the first question
+      _startTimer();
     } catch (e) {
-      _showErrorDialog('An error occurred: $e');
+      _showErrorDialog('Der opstod en fejl: $e');
     }
   }
 
+  // Start the timer for the current question
   void _startTimer() {
-    if (questions.isNotEmpty) {
-      _timeRemaining = questions[currentQuestionIndex]['timer'];
-      _timer?.cancel();
-      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (_timeRemaining > 0) {
-          setState(() {
-            _timeRemaining--;
-          });
-        } else {
-          _nextQuestion();
-        }
-      });
-    }
-  }
+    // Get the timer value for the current question
+    int questionTimer = questions[currentQuestionIndex]['timer'] ?? 30;
 
-  void _nextQuestion() {
     setState(() {
-      if (currentQuestionIndex < questions.length - 1) {
-        currentQuestionIndex++;
-        _startTimer();
+      _remainingTime = questionTimer;
+    });
+
+    // Cancel any existing timer
+    _timer?.cancel();
+
+    // Start a new timer
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingTime > 0) {
+        setState(() {
+          _remainingTime--;
+        });
       } else {
-        _submitQuiz();
+        timer.cancel();
+        _onTimeUp();
       }
     });
   }
 
+  // Handle what happens when time is up
+  void _onTimeUp() {
+    // You can choose to automatically go to the next question or submit the quiz
+    // Here, we choose to go to the next question
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Tiden er op!')),
+    );
+
+    _nextQuestion();
+  }
+
+  // Toggle the selection state of an answer
   void _selectAnswer(int index) {
     setState(() {
       selectedAnswers[currentQuestionIndex][index] =
@@ -152,144 +204,113 @@ class _TestState extends State<Test> {
     });
   }
 
-  void _submitQuiz() async {
+  // Navigate to the next question or submit the quiz
+  void _nextQuestion() {
+    // Cancel the timer for the current question
     _timer?.cancel();
 
-    // Debugging: Print selected and correct answers
-    for (int i = 0; i < questions.length; i++) {
-      final question = questions[i];
-      final selectedForQuestion = selectedAnswers[i];
-      final correctAnswers = question['correctAnswerIndices'];
+    if (currentQuestionIndex < questions.length - 1) {
+      setState(() {
+        currentQuestionIndex++;
+      });
 
-      // Get selected indices
-      List<int> selectedIndices = [];
-      for (int j = 0; j < selectedForQuestion.length; j++) {
-        if (selectedForQuestion[j]) {
-          selectedIndices.add(j);
-        }
-      }
-
-      print("Question ${i + 1}: ${question['question']}");
-      print("Selected Answers: $selectedIndices");
-      print("Correct Answers (adjusted): $correctAnswers");
+      // Start timer for the next question
+      _startTimer();
+    } else {
+      _submitQuiz();
     }
+  }
 
-    await _submitQuizResults();
+  // Submit the quiz
+  void _submitQuiz() {
+    // Record the quiz end time
+    DateTime quizEndTime = DateTime.now();
 
-    Navigator.push(
+    // Calculate time used in seconds
+    int timeUsed = quizEndTime.difference(_quizStartTime).inSeconds;
+
+    // Calculate the score (integer-based)
+    int score = _calculateScore();
+
+    // Cancel the timer if it's still running
+    _timer?.cancel();
+
+    // Navigate to TestResults screen without passing 'userID' and 'results'
+    Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => TestResults(
           selectedAnswers: selectedAnswers,
           questions: questions,
+          quizDifficulty: quizDifficulty ?? 'h1', // Provide a default if null
+          quizEndDate: quizEndTime.toUtc().toIso8601String(),
+          completed: true,
+          quizID: widget.quizID,
+          timeUsed: timeUsed,
         ),
       ),
     );
   }
 
-  Future<void> _submitQuizResults() async {
-    const String url = 'https://mercantec-quiz.onrender.com/api/User_Quiz';
-    final quizEndDate = DateTime.now().toUtc().toIso8601String();
-    final completed = true;
-    final results = calculateResults();
-    final quizID = widget.quizID;
-    final userIDString = await _secureStorage.readUserID();
-    final userID = int.tryParse(userIDString ?? '0') ?? 0;
-    final timeUsed = calculateTimeUsed();
-
-    final Map<String, dynamic> payload = {
-      "quizEndDate": quizEndDate,
-      "completed": completed,
-      "results": results,
-      "quizID": quizID,
-      "userID": userID,
-      "timeUsed": timeUsed,
-    };
-
-    _timer?.cancel();
-
-    // Debugging: Print selected and correct answers
-    for (int i = 0; i < questions.length; i++) {
-      final question = questions[i];
-      final selectedForQuestion = selectedAnswers[i];
-      final correctAnswers = question['correctAnswerIndices'];
-
-      // Get selected indices
-      List<int> selectedIndices = [];
-      for (int j = 0; j < selectedForQuestion.length; j++) {
-        if (selectedForQuestion[j]) {
-          selectedIndices.add(j);
-        }
-      }
-
-      print("Question ${i + 1}: ${question['question']}");
-      print("Selected Answers: $selectedIndices");
-      print("Correct Answers: $correctAnswers");
-    }
-
-    await _submitQuizResults();
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TestResults(
-          selectedAnswers: selectedAnswers,
-          questions: questions,
-        ),
-      ),
-    );
-
-    try {
-      final token = await _secureStorage.readToken();
-      if (token == null) {
-        throw Exception("Token not found. Please log in again.");
-      }
-
-      final response = await http.put(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode(payload),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        print('Quiz results submitted successfully');
-      } else {
-        print('Failed to submit quiz results');
-      }
-    } catch (e) {
-      print('Error submitting quiz results: $e');
-    }
-  }
-
-  int calculateResults() {
+  /// Calculates the user's score based on correct answers.
+  int _calculateScore() {
     int score = 0;
+
     for (int i = 0; i < questions.length; i++) {
-      if (selectedAnswers[i].contains(true)) {
+      List<bool> selectedForQuestion = selectedAnswers[i];
+      List<int> correctAnswerIndices =
+          List<int>.from(questions[i]['correctAnswerIndices'] ?? []);
+
+      // Get indices of selected answers
+      List<int> selectedIndices = [];
+      for (int j = 0; j < selectedForQuestion.length; j++) {
+        if (selectedForQuestion[j]) {
+          selectedIndices.add(j);
+        }
+      }
+
+      // Debugging output
+      print('Question ${i + 1}:');
+      print('Selected Indices: $selectedIndices');
+      print('Correct Indices: $correctAnswerIndices');
+
+      // Check if selected indices match the correct answer indices
+      if (_listsMatch(selectedIndices, correctAnswerIndices)) {
         score++;
       }
     }
+
+    print('Total Score: $score/${questions.length}');
     return score;
   }
 
-  int calculateTimeUsed() {
-    return 0; // Placeholder
+  /// Helper method to check if two lists contain the same elements, regardless of order.
+  bool _listsMatch(List<int> list1, List<int> list2) {
+    if (list1.length != list2.length) return false;
+    for (int element in list1) {
+      if (!list2.contains(element)) return false;
+    }
+    return true;
   }
 
+  /// Show an error dialog
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("Error"),
+          title: const Text("Fejl"),
           content: Text(message),
           actions: <Widget>[
             TextButton(
               child: const Text("OK"),
               onPressed: () {
                 Navigator.of(context).pop();
+                if (message.contains("Ingen spørgsmål fundet") ||
+                    message.contains("Token ikke fundet") ||
+                    message.contains("User ID ikke fundet")) {
+                  Navigator.of(context).pop(); // Exit the Test screen
+                }
               },
             ),
           ],
@@ -299,72 +320,99 @@ class _TestState extends State<Test> {
   }
 
   @override
+  void dispose() {
+    // Cancel the timer when the widget is removed
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (questions.isEmpty) {
-      return const Center(child: Text('No questions available.'));
+      return const Scaffold(
+        body: Center(child: Text('Ingen spørgsmål tilgængelige.')),
+      );
     }
 
     final currentQuestion = questions[currentQuestionIndex]['question'];
     final currentAnswers =
         questions[currentQuestionIndex]['answers'] as List<String>;
+    final currentTimer = questions[currentQuestionIndex]['timer'] ?? 30;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Question ${currentQuestionIndex + 1}'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Center(
-              child: Text(
-                'Time: $_timeRemaining',
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
+        title: Text('Spørgsmål ${currentQuestionIndex + 1}'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(10.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment
+              .stretch, // Ensures children stretch horizontally
           children: <Widget>[
+            // Timer display
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const Icon(Icons.timer, color: Colors.blue),
+                const SizedBox(width: 5),
+                Text(
+                  'Tid: $_remainingTime sek',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Spørgsmålstekst
             Text(
               currentQuestion,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            Column(
-              children: currentAnswers.asMap().entries.map((entry) {
-                int index = entry.key;
-                String answer = entry.value;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5.0),
-                  child: ElevatedButton(
-                    onPressed: () {
+
+            // Liste af svarmuligheder
+            Expanded(
+              child: ListView(
+                children: currentAnswers.asMap().entries.map((entry) {
+                  int index = entry.key;
+                  String answer = entry.value;
+                  return CheckboxListTile(
+                    title: Text(answer),
+                    value: selectedAnswers[currentQuestionIndex][index],
+                    onChanged: (bool? value) {
                       _selectAnswer(index);
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: selectedAnswers[currentQuestionIndex]
-                              [index]
-                          ? Colors.yellow
-                          : null,
-                    ),
-                    child: Text(answer),
-                  ),
-                );
-              }).toList(),
+                    activeColor: Colors.yellow,
+                  );
+                }).toList(),
+              ),
             ),
             const SizedBox(height: 20),
+
+            // Næste/Indsend knap
             ElevatedButton(
               onPressed: _nextQuestion,
-              child: Text(currentQuestionIndex < questions.length - 1
-                  ? 'Next'
-                  : 'Submit'),
+              style: ElevatedButton.styleFrom(
+                minimumSize:
+                    const Size(double.infinity, 50), // Full width, 50 height
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                textStyle:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              child: Text(
+                currentQuestionIndex < questions.length - 1
+                    ? 'Næste'
+                    : 'Indsend',
+              ),
             ),
           ],
         ),

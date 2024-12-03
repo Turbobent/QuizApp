@@ -54,6 +54,10 @@ class _TakenTestsState extends State<TakenTests> {
   bool isLoading = true;
   final SecureStorageService _secureStorage = SecureStorageService();
 
+  // Pagination variables
+  int currentPage = 1;
+  final int itemsPerPage = 5;
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +66,11 @@ class _TakenTestsState extends State<TakenTests> {
 
   /// Fetches the list of taken tests along with their max points
   Future<void> _fetchTakenTests() async {
+    setState(() {
+      isLoading = true;
+      currentPage = 1; // Reset to first page on refresh
+    });
+
     // Retrieve the user ID from secure storage as a string
     final userIdString = await _secureStorage.readUserID();
 
@@ -362,6 +371,35 @@ class _TakenTestsState extends State<TakenTests> {
     );
   }
 
+  /// Calculates the total number of pages
+  int get totalPages => (takenTests.length / itemsPerPage).ceil();
+
+  /// Retrieves the quizzes for the current page
+  List<TakenTest> get paginatedTakenTests {
+    int startIndex = (currentPage - 1) * itemsPerPage;
+    int endIndex = startIndex + itemsPerPage;
+    endIndex = endIndex > takenTests.length ? takenTests.length : endIndex;
+    return takenTests.sublist(startIndex, endIndex);
+  }
+
+  /// Navigates to the next page
+  void _nextPage() {
+    if (currentPage < totalPages) {
+      setState(() {
+        currentPage++;
+      });
+    }
+  }
+
+  /// Navigates to the previous page
+  void _previousPage() {
+    if (currentPage > 1) {
+      setState(() {
+        currentPage--;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -376,65 +414,82 @@ class _TakenTestsState extends State<TakenTests> {
                 padding: const EdgeInsets.all(10.0),
                 child: takenTests.isEmpty
                     ? const Center(
-                        child: Text('Ingen gennemførte tests fundet.'))
-                    : ListView.builder(
-                        itemCount: takenTests.length,
-                        itemBuilder: (context, index) {
-                          final test = takenTests[index];
-                          return Card(
-                            elevation: 3,
-                            margin: const EdgeInsets.symmetric(
-                                vertical: 8, horizontal: 5),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 10, horizontal: 15),
-                              title: Text(
-                                test.testName,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 18),
-                              ),
-                              subtitle:
-                                  Text('Date Taken: ${test.formattedDate}'),
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 5, horizontal: 10),
-                                decoration: BoxDecoration(
-                                  color: test.score >= (test.maxPoints / 2)
-                                      ? Colors.green[100]
-                                      : Colors.red[100],
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
-                                child: Text(
-                                  'Score: ${test.score} / ${test.maxPoints}',
-                                  style: TextStyle(
-                                    color: test.score >= (test.maxPoints / 2)
-                                        ? Colors.green[800]
-                                        : Colors.red[800],
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                        child: Text('Ingen gennemførte tests fundet.'),
+                      )
+                    : Column(
+                        children: [
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: paginatedTakenTests.length,
+                              itemBuilder: (context, index) {
+                                final test = paginatedTakenTests[index];
+                                return Card(
+                                  elevation: 3,
+                                  margin: const EdgeInsets.symmetric(
+                                      vertical: 8, horizontal: 5),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        vertical: 10, horizontal: 15),
+                                    title: Text(
+                                      test.testName,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18),
+                                    ),
+                                    subtitle: Text(
+                                        'Date Taken: ${test.formattedDate}'),
+                                    trailing: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 5, horizontal: 10),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            test.score >= (test.maxPoints / 2)
+                                                ? Colors.green[100]
+                                                : Colors.red[100],
+                                        borderRadius: BorderRadius.circular(5),
+                                      ),
+                                      child: Text(
+                                        'Score: ${test.score} / ${test.maxPoints}',
+                                        style: TextStyle(
+                                          color:
+                                              test.score >= (test.maxPoints / 2)
+                                                  ? Colors.green[800]
+                                                  : Colors.red[800],
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              onTap: () {
-                                // Optional: Navigate to detailed test results
-                                // Navigator.push(
-                                //   context,
-                                //   MaterialPageRoute(
-                                //     builder: (context) => TestResults(
-                                //       selectedAnswers: ...,
-                                //       questions: ...,
-                                //       quizDifficulty: ...,
-                                //       quizEndDate: test.dateTaken,
-                                //       completed: true,
-                                //       quizID: ...,
-                                //       timeUsed: ...,
-                                //     ),
-                                //   ),
-                                // );
+                                );
                               },
                             ),
-                          );
-                        },
+                          ),
+                          // Pagination Controls
+                          if (totalPages > 1)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed:
+                                        currentPage > 1 ? _previousPage : null,
+                                    child: const Text('Previous'),
+                                  ),
+                                  const SizedBox(width: 20),
+                                  Text('Page $currentPage of $totalPages'),
+                                  const SizedBox(width: 20),
+                                  ElevatedButton(
+                                    onPressed: currentPage < totalPages
+                                        ? _nextPage
+                                        : null,
+                                    child: const Text('Next'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
               ),
             ),

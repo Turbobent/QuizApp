@@ -115,6 +115,11 @@ class _TestResultsState extends State<TestResults>
       // Calculate maximum possible points
       _maxPoints = _calculateMaxPoints();
 
+ // Calculate the percentage score
+    double percentageScore = _maxPoints > 0 
+        ? (_totalPoints / _maxPoints) * 100 
+        : 0.0;
+
       // Determine if the score is under the threshold (50%)
       _isUnderThreshold = (_totalPoints / _maxPoints) < 0.5;
 
@@ -122,7 +127,7 @@ class _TestResultsState extends State<TestResults>
       Map<String, dynamic> payload = {
         "quizEndDate": widget.quizEndDate,
         "completed": widget.completed,
-        "results": _totalPoints, // Use the calculated total points
+        "results": percentageScore, // Use the calculated total points
         "quizID": widget.quizID,
         "userID": _userID, // Use the retrieved userID
         "timeUsed": widget.timeUsed,
@@ -397,11 +402,6 @@ class _TestResultsState extends State<TestResults>
                       : Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              'Your Score: $_totalPoints / $_maxPoints',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 24),
-                            ),
                             const SizedBox(height: 10),
                             Text(
                               'Percentage: ${_calculatePercentage()}%',

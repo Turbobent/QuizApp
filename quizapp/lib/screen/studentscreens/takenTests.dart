@@ -8,12 +8,14 @@ import 'package:intl/intl.dart'; // Imported intl for date formatting
 
 // Model class for a taken test
 class TakenTest {
+  final int quizID; // Added quizID to uniquely identify each test
   final String testName;
   final String dateTaken;
   final int score;
   final int maxPoints;
 
   TakenTest({
+    required this.quizID,
     required this.testName,
     required this.dateTaken,
     required this.score,
@@ -21,8 +23,10 @@ class TakenTest {
   });
 
   // Factory constructor to create a TakenTest instance from JSON
-  factory TakenTest.fromJson(Map<String, dynamic> json, int maxPoints) {
+  factory TakenTest.fromJson(
+      Map<String, dynamic> json, int maxPoints, int quizID) {
     return TakenTest(
+      quizID: quizID,
       testName: json['quiz']['title'] ?? 'Unknown Title',
       dateTaken: json['quizEndDate'] ?? 'Unknown Date',
       score: json['results'] ?? 0,
@@ -50,7 +54,10 @@ class TakenTests extends StatefulWidget {
 }
 
 class _TakenTestsState extends State<TakenTests> {
-  List<TakenTest> takenTests = [];
+  // All taken tests fetched from the server
+  List<TakenTest> allTakenTests = [];
+  // Displayed taken tests after applying search filter
+  List<TakenTest> displayedTakenTests = [];
   bool isLoading = true;
   final SecureStorageService _secureStorage = SecureStorageService();
 
@@ -58,10 +65,20 @@ class _TakenTestsState extends State<TakenTests> {
   int currentPage = 1;
   final int itemsPerPage = 5;
 
+  // Search related variables
+  final TextEditingController _searchController = TextEditingController();
+  bool isSearching = false;
+
   @override
   void initState() {
     super.initState();
     _fetchTakenTests();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   /// Fetches the list of taken tests along with their max points
@@ -108,8 +125,10 @@ class _TakenTestsState extends State<TakenTests> {
         // If no completed tests, update the state accordingly
         if (completedTests.isEmpty) {
           setState(() {
-            takenTests = [];
+            allTakenTests = [];
+            displayedTakenTests = [];
             isLoading = false;
+            isSearching = false;
           });
           return;
         }
@@ -155,8 +174,8 @@ class _TakenTestsState extends State<TakenTests> {
             maxPoints = 1;
           }
 
-          // Create TakenTest instance
-          TakenTest takenTest = TakenTest.fromJson(test, maxPoints);
+          // Create TakenTest instance with quizID
+          TakenTest takenTest = TakenTest.fromJson(test, maxPoints, quizID);
           return takenTest;
         }).toList();
 
@@ -168,7 +187,11 @@ class _TakenTestsState extends State<TakenTests> {
             results.whereType<TakenTest>().toList();
 
         setState(() {
-          takenTests = fetchedTakenTests;
+          allTakenTests = fetchedTakenTests;
+          // If not searching, display all taken tests
+          if (!isSearching) {
+            displayedTakenTests = allTakenTests;
+          }
           isLoading = false;
         });
       } else {
@@ -371,15 +394,17 @@ class _TakenTestsState extends State<TakenTests> {
     );
   }
 
-  /// Calculates the total number of pages
-  int get totalPages => (takenTests.length / itemsPerPage).ceil();
+  /// Calculates the total number of pages based on the current displayed list
+  int get totalPages => (displayedTakenTests.length / itemsPerPage).ceil();
 
-  /// Retrieves the quizzes for the current page
+  /// Retrieves the quizzes for the current page from the displayed list
   List<TakenTest> get paginatedTakenTests {
     int startIndex = (currentPage - 1) * itemsPerPage;
     int endIndex = startIndex + itemsPerPage;
-    endIndex = endIndex > takenTests.length ? takenTests.length : endIndex;
-    return takenTests.sublist(startIndex, endIndex);
+    endIndex = endIndex > displayedTakenTests.length
+        ? displayedTakenTests.length
+        : endIndex;
+    return displayedTakenTests.sublist(startIndex, endIndex);
   }
 
   /// Navigates to the next page
@@ -400,6 +425,82 @@ class _TakenTestsState extends State<TakenTests> {
     }
   }
 
+  /// Performs search by calling the search endpoint and filtering the taken tests
+  Future<void> _performSearch(String searchWord) async {
+    if (searchWord.isEmpty) {
+      // If search word is empty, reset to all taken tests
+      setState(() {
+        displayedTakenTests = allTakenTests;
+        currentPage = 1;
+        isSearching = false;
+      });
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+      currentPage = 1;
+      isSearching = true;
+    });
+
+    final String searchUrl =
+        'https://mercantec-quiz.onrender.com/api/Quizs/QuizSearch?searchWord=$searchWord';
+
+    try {
+      // Retrieve the JWT token from secure storage
+      final token = await _secureStorage.readToken();
+      if (token == null) {
+        print('Error: Token not found');
+        _showErrorDialog('Authentication Error', 'Please log in again.');
+        return;
+      }
+
+      // Make the GET request with the JWT token in the headers
+      final response = await http.get(
+        Uri.parse(searchUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> searchResults = jsonDecode(response.body);
+
+        // Extract quiz IDs from search results
+        List<int> matchedQuizIDs = [];
+        for (var quiz in searchResults) {
+          if (quiz is Map<String, dynamic> && quiz['id'] != null) {
+            matchedQuizIDs.add(int.parse(quiz['id'].toString()));
+          }
+        }
+
+        // Filter the taken tests based on matched quiz IDs
+        List<TakenTest> filteredTests = allTakenTests
+            .where((test) => matchedQuizIDs.contains(test.quizID))
+            .toList();
+
+        setState(() {
+          displayedTakenTests = filteredTests;
+          isLoading = false;
+        });
+      } else {
+        print('Search failed with status: ${response.statusCode}');
+        _showErrorDialog('Search Error',
+            'Failed to perform search. Please try again later.');
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error during search: $e');
+      _showErrorDialog('Network Error', 'An error occurred while searching.');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -412,85 +513,135 @@ class _TakenTestsState extends State<TakenTests> {
               onRefresh: _fetchTakenTests,
               child: Padding(
                 padding: const EdgeInsets.all(10.0),
-                child: takenTests.isEmpty
-                    ? const Center(
-                        child: Text('Ingen gennemførte tests fundet.'),
-                      )
-                    : Column(
+                child: Column(
+                  children: [
+                    // Search Bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10.0),
+                      child: Row(
                         children: [
                           Expanded(
-                            child: ListView.builder(
-                              itemCount: paginatedTakenTests.length,
-                              itemBuilder: (context, index) {
-                                final test = paginatedTakenTests[index];
-                                return Card(
-                                  elevation: 3,
-                                  margin: const EdgeInsets.symmetric(
-                                      vertical: 8, horizontal: 5),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        vertical: 10, horizontal: 15),
-                                    title: Text(
-                                      test.testName,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18),
-                                    ),
-                                    subtitle: Text(
-                                        'Date Taken: ${test.formattedDate}'),
-                                    trailing: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 5, horizontal: 10),
-                                      decoration: BoxDecoration(
-                                        color:
-                                            test.score >= (test.maxPoints / 2)
-                                                ? Colors.green[100]
-                                                : Colors.red[100],
-                                        borderRadius: BorderRadius.circular(5),
-                                      ),
-                                      child: Text(
-                                        'Score: ${test.score} / ${test.maxPoints}',
-                                        style: TextStyle(
-                                          color:
-                                              test.score >= (test.maxPoints / 2)
-                                                  ? Colors.green[800]
-                                                  : Colors.red[800],
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
+                            child: TextField(
+                              controller: _searchController,
+                              decoration: InputDecoration(
+                                labelText: 'Search Tests',
+                                border: const OutlineInputBorder(),
+                                suffixIcon: IconButton(
+                                  icon: const Icon(Icons.search),
+                                  onPressed: () {
+                                    _performSearch(
+                                        _searchController.text.trim());
+                                  },
+                                ),
+                              ),
+                              onSubmitted: (value) {
+                                _performSearch(value.trim());
                               },
                             ),
                           ),
-                          // Pagination Controls
-                          if (totalPages > 1)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  ElevatedButton(
-                                    onPressed:
-                                        currentPage > 1 ? _previousPage : null,
-                                    child: const Text('Previous'),
-                                  ),
-                                  const SizedBox(width: 20),
-                                  Text('Page $currentPage of $totalPages'),
-                                  const SizedBox(width: 20),
-                                  ElevatedButton(
-                                    onPressed: currentPage < totalPages
-                                        ? _nextPage
-                                        : null,
-                                    child: const Text('Next'),
-                                  ),
-                                ],
-                              ),
+                          if (isSearching)
+                            IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                _performSearch('');
+                              },
                             ),
                         ],
                       ),
+                    ),
+                    // Display message if no tests are found
+                    if (displayedTakenTests.isEmpty)
+                      const Expanded(
+                        child: Center(
+                          child: Text('Ingen gennemførte tests fundet.'),
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: Column(
+                          children: [
+                            // List of Taken Tests
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: paginatedTakenTests.length,
+                                itemBuilder: (context, index) {
+                                  final test = paginatedTakenTests[index];
+                                  return Card(
+                                    elevation: 3,
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 8, horizontal: 5),
+                                    child: ListTile(
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              vertical: 10, horizontal: 15),
+                                      title: Text(
+                                        test.testName,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18),
+                                      ),
+                                      subtitle: Text(
+                                          'Date Taken: ${test.formattedDate}'),
+                                      trailing: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 5, horizontal: 10),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              test.score >= (test.maxPoints / 2)
+                                                  ? Colors.green[100]
+                                                  : Colors.red[100],
+                                          borderRadius:
+                                              BorderRadius.circular(5),
+                                        ),
+                                        child: Text(
+                                          'Score: ${test.score} / ${test.maxPoints}',
+                                          style: TextStyle(
+                                            color: test.score >=
+                                                    (test.maxPoints / 2)
+                                                ? Colors.green[800]
+                                                : Colors.red[800],
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            // Pagination Controls
+                            if (totalPages > 1)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 10),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: currentPage > 1
+                                          ? _previousPage
+                                          : null,
+                                      child: const Text('Previous'),
+                                    ),
+                                    const SizedBox(width: 20),
+                                    Text('Page $currentPage of $totalPages'),
+                                    const SizedBox(width: 20),
+                                    ElevatedButton(
+                                      onPressed: currentPage < totalPages
+                                          ? _nextPage
+                                          : null,
+                                      child: const Text('Next'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
     );

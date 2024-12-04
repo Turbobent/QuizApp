@@ -48,11 +48,11 @@ class _TestState extends State<Test> {
       final userID = await _secureStorage.readUserID();
 
       if (token == null) {
-        throw Exception("Token ikke fundet. Log venligst ind igen.");
+        throw Exception("Token not found. login again.");
       }
 
       if (userID == null) {
-        throw Exception("User ID ikke fundet. Log venligst ind igen.");
+        throw Exception("User ID not found. login again.");
       }
 
       // Fetch quiz details (including difficulty)
@@ -156,7 +156,7 @@ class _TestState extends State<Test> {
       // Start timer for the first question
       _startTimer();
     } catch (e) {
-      _showErrorDialog('Der opstod en fejl: $e');
+      _showErrorDialog('Error: $e');
     }
   }
 
@@ -187,12 +187,9 @@ class _TestState extends State<Test> {
 
   // Handle what happens when time is up
   void _onTimeUp() {
-    // You can choose to automatically go to the next question or submit the quiz
-    // Here, we choose to go to the next question
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Tiden er op!')),
     );
-
     _nextQuestion();
   }
 
@@ -299,16 +296,16 @@ class _TestState extends State<Test> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("Fejl"),
+          title: const Text("Error"),
           content: Text(message),
           actions: <Widget>[
             TextButton(
               child: const Text("OK"),
               onPressed: () {
                 Navigator.of(context).pop();
-                if (message.contains("Ingen spørgsmål fundet") ||
-                    message.contains("Token ikke fundet") ||
-                    message.contains("User ID ikke fundet")) {
+                if (message.contains("No questions found") ||
+                    message.contains("Token not found") ||
+                    message.contains("User ID not found")) {
                   Navigator.of(context).pop(); // Exit the Test screen
                 }
               },
@@ -336,7 +333,7 @@ class _TestState extends State<Test> {
 
     if (questions.isEmpty) {
       return const Scaffold(
-        body: Center(child: Text('Ingen spørgsmål tilgængelige.')),
+        body: Center(child: Text('No questions available.')),
       );
     }
 
@@ -347,7 +344,7 @@ class _TestState extends State<Test> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Spørgsmål ${currentQuestionIndex + 1}'),
+        title: Text('Question ${currentQuestionIndex + 1}'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(10.0),
@@ -362,7 +359,7 @@ class _TestState extends State<Test> {
                 const Icon(Icons.timer, color: Colors.blue),
                 const SizedBox(width: 5),
                 Text(
-                  'Tid: $_remainingTime sek',
+                  'Time: $_remainingTime sec',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -410,8 +407,8 @@ class _TestState extends State<Test> {
               ),
               child: Text(
                 currentQuestionIndex < questions.length - 1
-                    ? 'Næste'
-                    : 'Indsend',
+                    ? 'Next'
+                    : 'Submit',
               ),
             ),
           ],

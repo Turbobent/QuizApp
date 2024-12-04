@@ -351,7 +351,7 @@ class _TakenTestsState extends State<TakenTests> {
                     if (displayedTakenTests.isEmpty)
                       const Expanded(
                         child: Center(
-                          child: Text('Ingen gennemførte tests fundet.'),
+                          child: Text('No completed test found.'),
                         ),
                       )
                     else

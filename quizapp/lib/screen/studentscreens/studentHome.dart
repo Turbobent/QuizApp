@@ -8,6 +8,10 @@ import 'package:quizapp/screen/studentscreens/takenTests.dart';
 import 'package:quizapp/services/flutter_secure_storage.dart';
 
 /// Entry point of the application.
+///
+/// **Note:** Typically, `runApp` should only be called once in `main.dart`.
+/// Having multiple `runApp` calls can lead to unexpected behaviors.
+/// Ensure that `studentHome.dart` is navigated to via routes and does not call `runApp` separately.
 void main() => runApp(const MyApp());
 
 /// Root widget of the application.
@@ -22,6 +26,8 @@ class MyApp extends StatelessWidget {
       home: const StudentHome(),
       routes: {
         '/takenTests': (context) => const TakenTests(),
+        // Add '/main' route if not already defined elsewhere
+        // '/main': (context) => const StudentLogin(),
       },
     );
   }
@@ -114,11 +120,59 @@ class _StudentHomeState extends State<StudentHome> {
     fetchQuizzes(); // Fetch quizzes when the widget initializes
   }
 
+  /// Logs out the user by deleting stored credentials and navigating to the login screen.
+  Future<void> _logout() async {
+    // Optional: Show a confirmation dialog before logging out
+    bool confirm = await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm) {
+      try {
+        // Delete the JWT token and User ID from secure storage
+        await _secureStorage.deleteToken();
+        await _secureStorage.deleteUserID();
+
+        // Navigate to the login screen and remove all previous routes
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('/main', (route) => false);
+      } catch (e) {
+        // Handle any errors during logout
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error during logout: $e'),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mercantec Quiz'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: _logout,
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

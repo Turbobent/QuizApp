@@ -10,7 +10,7 @@ void main() => runApp(const StudentLogin());
 class StudentLogin extends StatelessWidget {
   const StudentLogin({super.key});
 
-  static const String _title = 'Mercantec Quiz login';
+  static const String _title = 'Mercantec Quiz Login';
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +105,18 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
       padding: const EdgeInsets.all(10),
       child: ListView(
         children: <Widget>[
+          // Add the Logo img
+          Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.all(10),
+            child: Image.asset(
+              'assets/Mercantec-LOGO_XL-sort.png',
+              width: 150,
+              height: 150,
+              fit: BoxFit.contain,
+            ),
+          ),
+          // Existing Login Title
           Container(
             alignment: Alignment.center,
             padding: const EdgeInsets.all(10),
@@ -117,6 +129,7 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
               ),
             ),
           ),
+          // Username TextField
           Container(
             padding: const EdgeInsets.all(10),
             child: TextField(
@@ -127,6 +140,7 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
               ),
             ),
           ),
+          // Password TextField
           Container(
             padding: const EdgeInsets.all(10),
             child: TextField(
@@ -138,13 +152,16 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
               ),
             ),
           ),
+          // Login Button
           Container(
             height: 50,
             padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
             child: ElevatedButton(
               onPressed: isLoading ? null : login,
               child: isLoading
-                  ? CircularProgressIndicator(color: Colors.white)
+                  ? const CircularProgressIndicator(
+                      color: Colors.white,
+                    )
                   : const Text('Login'),
             ),
           ),

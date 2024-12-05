@@ -61,7 +61,7 @@ class _TakenTestsState extends State<TakenTests> {
 
   // Pagination variables
   int currentPage = 1;
-  final int itemsPerPage = 5;
+  final int itemsPerPage = 100;
 
   // Search related variables
   final TextEditingController _searchController = TextEditingController();

@@ -11,6 +11,7 @@ class TakenTest {
   final int quizID;
   final String testName;
   final String dateTaken;
+  final DateTime? parsedDate; // New property
   final int score;
 
   TakenTest({
@@ -18,27 +19,41 @@ class TakenTest {
     required this.testName,
     required this.dateTaken,
     required this.score,
+    this.parsedDate, // Initialize the new property
   });
 
   // Factory constructor to create a TakenTest instance from JSON
   factory TakenTest.fromJson(Map<String, dynamic> json) {
+    DateTime? parsedDate;
+    try {
+      if (json['quizEndDate'] != null && json['quizEndDate'] is String) {
+        parsedDate = DateTime.parse(json['quizEndDate']);
+      }
+    } catch (e) {
+      // If parsing fails, parsedDate remains null
+      parsedDate = null;
+    }
+
     return TakenTest(
       quizID: json['quiz']['id'] != null
-          ? int.parse(json['quiz']['id'].toString())
+          ? int.tryParse(json['quiz']['id'].toString()) ?? 0
           : 0,
       testName: json['quiz']['title'] ?? 'Unknown Title',
       dateTaken: json['quizEndDate'] ?? 'Unknown Date',
-      score: json['results'] ?? 0,
+      score: json['results'] != null
+          ? (json['results'] is int
+              ? json['results']
+              : int.tryParse(json['results'].toString()) ?? 0)
+          : 0,
+      parsedDate: parsedDate, // Assign the parsed date
     );
   }
 
   // Getter to return formatted date
   String get formattedDate {
-    try {
-      DateTime parsedDate = DateTime.parse(dateTaken);
-      return DateFormat('dd-MM-yyyy').format(parsedDate);
-    } catch (e) {
-      // If the date cannot be parsed, return the original string
+    if (parsedDate != null) {
+      return DateFormat('dd-MM-yyyy').format(parsedDate!);
+    } else {
       return dateTaken;
     }
   }
@@ -144,6 +159,14 @@ class _TakenTestsState extends State<TakenTests> {
             .map((test) => TakenTest.fromJson(test))
             .where((test) => test.quizID != 0)
             .toList();
+
+        // Sort the fetched tests by parsedDate in descending order
+        fetchedTakenTests.sort((a, b) {
+          if (a.parsedDate == null && b.parsedDate == null) return 0;
+          if (a.parsedDate == null) return 1; // a is older
+          if (b.parsedDate == null) return -1; // b is older
+          return b.parsedDate!.compareTo(a.parsedDate!);
+        });
 
         setState(() {
           allTakenTests = fetchedTakenTests;
@@ -275,7 +298,14 @@ class _TakenTestsState extends State<TakenTests> {
         List<TakenTest> filteredTests = allTakenTests
             .where((test) => matchedQuizIDs.contains(test.quizID))
             .toList();
-        print('Filtered Tests: $filteredTests'); // Debug statement
+
+        // Sort the filtered tests by parsedDate in descending order
+        filteredTests.sort((a, b) {
+          if (a.parsedDate == null && b.parsedDate == null) return 0;
+          if (a.parsedDate == null) return 1; // a is older
+          if (b.parsedDate == null) return -1; // b is older
+          return b.parsedDate!.compareTo(a.parsedDate!);
+        });
 
         setState(() {
           displayedTakenTests = filteredTests;

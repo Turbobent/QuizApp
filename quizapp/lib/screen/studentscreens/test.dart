@@ -48,11 +48,11 @@ class _TestState extends State<Test> {
       final userID = await _secureStorage.readUserID();
 
       if (token == null) {
-        throw Exception("Token not found. login again.");
+        throw Exception("Token not found. Please log in again.");
       }
 
       if (userID == null) {
-        throw Exception("User ID not found. login again.");
+        throw Exception("User ID not found. Please log in again.");
       }
 
       // Fetch quiz details (including difficulty)
@@ -66,7 +66,7 @@ class _TestState extends State<Test> {
       );
 
       if (quizResponse.statusCode != 200) {
-        _showErrorDialog('Kunne ikke hente quiz detaljer');
+        _showErrorDialog('Unable to fetch quiz details.');
         return;
       }
 
@@ -86,7 +86,7 @@ class _TestState extends State<Test> {
       );
 
       if (quizQuestionResponse.statusCode != 200) {
-        _showErrorDialog('Kunne ikke hente quiz-spørgsmål par');
+        _showErrorDialog('Unable to fetch quiz-question pairs.');
         return;
       }
 
@@ -98,7 +98,7 @@ class _TestState extends State<Test> {
           .toList();
 
       if (questionIDs.isEmpty) {
-        _showErrorDialog("Ingen spørgsmål fundet for den valgte quiz.");
+        _showErrorDialog("No questions found for the selected quiz.");
         return;
       }
 
@@ -112,7 +112,7 @@ class _TestState extends State<Test> {
       );
 
       if (questionResponse.statusCode != 200) {
-        _showErrorDialog('Kunne ikke hente spørgsmål');
+        _showErrorDialog('Unable to fetch questions.');
         return;
       }
 
@@ -133,8 +133,7 @@ class _TestState extends State<Test> {
           }
 
           fetchedQuestions.add({
-            'question':
-                questionData['title'] ?? 'Ingen spørgsmålstekst tilgængelig',
+            'question': questionData['title'] ?? 'No question text available.',
             'answers': List<String>.from(questionData['possibleAnswers'] ?? []),
             'correctAnswerIndices': correctAnswerIndices,
             'timer': questionData['time'] ?? 30,
@@ -188,7 +187,7 @@ class _TestState extends State<Test> {
   // Handle what happens when time is up
   void _onTimeUp() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Tiden er op!')),
+      const SnackBar(content: Text('Time is up!')),
     );
     _nextQuestion();
   }
@@ -196,8 +195,21 @@ class _TestState extends State<Test> {
   // Toggle the selection state of an answer
   void _selectAnswer(int index) {
     setState(() {
-      selectedAnswers[currentQuestionIndex][index] =
-          !selectedAnswers[currentQuestionIndex][index];
+      // Determine if the current question has multiple correct answers
+      int correctAnswersCount =
+          (questions[currentQuestionIndex]['correctAnswerIndices'] as List)
+              .length;
+
+      if (correctAnswersCount > 1) {
+        // Multiple correct answers: Use checkboxes
+        selectedAnswers[currentQuestionIndex][index] =
+            !selectedAnswers[currentQuestionIndex][index];
+      } else {
+        // Single correct answer: Use radio buttons
+        for (int i = 0; i < selectedAnswers[currentQuestionIndex].length; i++) {
+          selectedAnswers[currentQuestionIndex][i] = i == index;
+        }
+      }
     });
   }
 
@@ -341,6 +353,17 @@ class _TestState extends State<Test> {
     final currentAnswers =
         questions[currentQuestionIndex]['answers'] as List<String>;
     final currentTimer = questions[currentQuestionIndex]['timer'] ?? 30;
+    final correctAnswersCount =
+        (questions[currentQuestionIndex]['correctAnswerIndices'] as List)
+            .length;
+
+    // Determine if the current question requires single or multiple selections
+    final bool isSingleAnswer = correctAnswersCount == 1;
+
+    // Instruction text based on the number of correct answers
+    final String instructionText = isSingleAnswer
+        ? 'Select the correct answer.'
+        : 'Select the $correctAnswersCount correct answers.';
 
     return Scaffold(
       appBar: AppBar(
@@ -369,33 +392,57 @@ class _TestState extends State<Test> {
             ),
             const SizedBox(height: 10),
 
-            // Spørgsmålstekst
+            // Question text
             Text(
               currentQuestion,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 10),
+
+            // Instruction Text
+            Text(
+              instructionText,
+              style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
+            ),
             const SizedBox(height: 20),
 
-            // Liste af svarmuligheder
+            // List of possible answers
             Expanded(
               child: ListView(
                 children: currentAnswers.asMap().entries.map((entry) {
                   int index = entry.key;
                   String answer = entry.value;
-                  return CheckboxListTile(
-                    title: Text(answer),
-                    value: selectedAnswers[currentQuestionIndex][index],
-                    onChanged: (bool? value) {
-                      _selectAnswer(index);
-                    },
-                    activeColor: Colors.yellow,
-                  );
+
+                  if (isSingleAnswer) {
+                    // Use RadioListTile for single correct answer
+                    return RadioListTile<bool>(
+                      title: Text(answer),
+                      value: true,
+                      groupValue: selectedAnswers[currentQuestionIndex][index]
+                          ? true
+                          : null,
+                      onChanged: (bool? value) {
+                        _selectAnswer(index);
+                      },
+                      activeColor: Colors.yellow,
+                    );
+                  } else {
+                    // Use CheckboxListTile for multiple correct answers
+                    return CheckboxListTile(
+                      title: Text(answer),
+                      value: selectedAnswers[currentQuestionIndex][index],
+                      onChanged: (bool? value) {
+                        _selectAnswer(index);
+                      },
+                      activeColor: Colors.yellow,
+                    );
+                  }
                 }).toList(),
               ),
             ),
             const SizedBox(height: 20),
 
-            // Næste/Indsend knap
+            // Next/Submit button
             ElevatedButton(
               onPressed: _nextQuestion,
               style: ElevatedButton.styleFrom(
@@ -406,9 +453,7 @@ class _TestState extends State<Test> {
                     const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               child: Text(
-                currentQuestionIndex < questions.length - 1
-                    ? 'Next'
-                    : 'Submit',
+                currentQuestionIndex < questions.length - 1 ? 'Next' : 'Submit',
               ),
             ),
           ],

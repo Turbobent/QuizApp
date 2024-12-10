@@ -7,11 +7,6 @@ import 'package:quizapp/screen/studentscreens/test.dart';
 import 'package:quizapp/screen/studentscreens/takenTests.dart';
 import 'package:quizapp/services/flutter_secure_storage.dart';
 
-/// Entry point of the application.
-///
-/// **Note:** Typically, `runApp` should only be called once in `main.dart`.
-/// Having multiple `runApp` calls can lead to unexpected behaviors.
-/// Ensure that `studentHome.dart` is navigated to via routes and does not call `runApp` separately.
 void main() => runApp(const MyApp());
 
 /// Root widget of the application.
@@ -26,8 +21,6 @@ class MyApp extends StatelessWidget {
       home: const StudentHome(),
       routes: {
         '/takenTests': (context) => const TakenTests(),
-        // Add '/main' route if not already defined elsewhere
-        // '/main': (context) => const StudentLogin(),
       },
     );
   }
@@ -122,7 +115,7 @@ class _StudentHomeState extends State<StudentHome> {
 
   /// Logs out the user by deleting stored credentials and navigating to the login screen.
   Future<void> _logout() async {
-    // Optional: Show a confirmation dialog before logging out
+    //confirmation dialog before logging out
     bool confirm = await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -216,7 +209,7 @@ class _StudentHomeState extends State<StudentHome> {
             ),
             const SizedBox(height: 20),
 
-            // Expanded section for quizzes list or loading indicator/error message
+            //section for quizzes list or loading indicator/error message
             Expanded(
               child: isLoading
                   ? const Center(

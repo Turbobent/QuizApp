@@ -4,7 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:quizapp/screen/studentscreens/studentHome.dart';
-import 'package:quizapp/services/flutter_secure_storage.dart'; // Ensure this import exists
+import 'package:quizapp/services/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:math';
 import 'dart:io';
@@ -183,9 +183,6 @@ class _TestResultsState extends State<TestResults>
       setState(() {
         _isSubmitting = false;
       });
-
-      // Calculate maximum possible points (redundant if already done above)
-      // _maxPoints is already calculated before
 
       // Re-determine if the score is under the threshold (in case maxPoints was 0)
       _isUnderThreshold =

@@ -4,14 +4,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:quizapp/services/flutter_secure_storage.dart';
-import 'package:intl/intl.dart'; // Imported intl for date formatting
+import 'package:intl/intl.dart';
 
 // Model class for a taken test
 class TakenTest {
   final int quizID;
   final String testName;
   final String dateTaken;
-  final DateTime? parsedDate; // New property
+  final DateTime? parsedDate;
   final int score;
 
   TakenTest({
@@ -19,7 +19,7 @@ class TakenTest {
     required this.testName,
     required this.dateTaken,
     required this.score,
-    this.parsedDate, // Initialize the new property
+    this.parsedDate,
   });
 
   // Factory constructor to create a TakenTest instance from JSON
@@ -240,7 +240,7 @@ class _TakenTestsState extends State<TakenTests> {
     }
   }
 
-  /// Performs search by calling the search endpoint and filtering the taken tests
+  ///search by calling the search endpoint and filtering the taken tests
   Future<void> _performSearch(String searchWord) async {
     if (searchWord.isEmpty) {
       // If search word is empty, reset to all taken tests
